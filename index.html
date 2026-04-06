@@ -389,8 +389,9 @@
 </div>
 
 <script>
-  let map, S = [], FC = null, TC = null, BT = 'any', RD = null, RL = [], ML = [], ST = null;
+  let map, S = [], FB = [], FC = null, TC = null, BT = 'any', RD = null, RL = [], ML = [], ST = null;
   const GD = [54.372, 18.638];
+  const WORKER = 'https://mevo-gbfs-proxy.maks-naumovich2349.workers.dev';
 
   map = L.map('map', { zoomControl: false }).setView(GD, 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19 }).addTo(map);
@@ -437,19 +438,75 @@
   function err(m) { const e = document.getElementById('E'); e.textContent = m; e.classList.add('on') }
   function clrErr() { document.getElementById('E').classList.remove('on') }
 
-  // Load data
+  // Load data — try live worker first, fallback to static JSON
+  async function gbfs(endpoint) {
+    const r = await fetch(`${WORKER}/${endpoint}`);
+    if (!r.ok) throw new Error(`${endpoint}: ${r.status}`);
+    return r.json();
+  }
+
+  async function loadLive() {
+    const [info, status, bikes] = await Promise.all([
+      gbfs('station_information.json'),
+      gbfs('station_status.json'),
+      gbfs('free_bike_status.json')
+    ]);
+    const sm = {};
+    for (const s of status.data.stations) sm[s.station_id] = s;
+    S = info.data.stations.map(st => {
+      const s = sm[st.station_id] || {};
+      const vt = s.vehicle_types_available || [];
+      const bike = vt.find(v => v.vehicle_type_id === 'bike');
+      const ebike = vt.find(v => v.vehicle_type_id === 'ebike');
+      return {
+        id: st.station_id, name: st.name, address: st.address,
+        lat: st.lat, lon: st.lon, capacity: st.capacity,
+        bikes: bike ? bike.count : 0, ebikes: ebike ? ebike.count : 0,
+        docks: s.num_docks_available || 0,
+        active: s.is_renting && s.is_returning
+      };
+    }).filter(s => s.active !== false);
+    FB = bikes.data.bikes
+      .filter(b => !b.is_reserved && !b.is_disabled)
+      .map(b => ({
+        id: b.bike_id, lat: b.lat, lon: b.lon,
+        type: b.vehicle_type_id, // 'bike' or 'ebike'
+        range: b.current_range_meters,
+        uri: b.rental_uris
+      }));
+    return new Date(status.last_updated * 1000);
+  }
+
+  async function loadStatic() {
+    const r = await fetch('mevo-data.json');
+    if (!r.ok) throw new Error('Brak danych');
+    const d = await r.json();
+    S = d.stations.filter(s => s.active !== false);
+    FB = [];
+    return new Date(d.updated);
+  }
+
+  let liveMode = false;
+
   async function loadData() {
     try {
-      const r = await fetch('mevo-data.json');
-      if (!r.ok) throw new Error('Brak pliku mevo-data.json');
-      const d = await r.json();
-      S = d.stations.filter(s => s.active !== false);
+      let updated;
+      try {
+        updated = await loadLive();
+        liveMode = true;
+      } catch {
+        updated = await loadStatic();
+        liveMode = false;
+      }
       document.getElementById('M').style.display = 'flex';
-      document.getElementById('UT').textContent = new Date(d.updated).toLocaleString('pl-PL');
-      document.getElementById('SC').textContent = S.length;
+      document.getElementById('UT').textContent = updated.toLocaleString('pl-PL');
+      document.getElementById('SC').textContent = S.length + (liveMode && FB.length ? ` + ${FB.length} rowerów` : '');
       clrErr();
+      if (!liveMode) {
+        err('Brak połączenia z MEVO — pokazujemy stacje, ale dostępność rowerów i doków może być nieaktualna.');
+      }
     } catch (e) {
-      err('Brak danych. Uruchom: node fetch-data.js');
+      err('Brak danych. Uruchom: node fetch-data.js lub skonfiguruj worker');
     }
   }
 
@@ -474,6 +531,19 @@
       if (mode === 'pick' && bikesAt(s, t) < 1) return;
       if (mode === 'drop' && s.docks < 1) return;
       if (d < bd) { bd = d; best = { ...s, dist: d }; }
+    });
+    return best;
+  }
+
+  // Find nearest free-floating bike as alternative pickup
+  function findFreeBike(c, t) {
+    let best = null, bd = Infinity;
+    FB.forEach(b => {
+      if (t === 'electric' && b.type !== 'ebike') return;
+      if (t === 'classic' && b.type !== 'bike') return;
+      const d = hav(c, [b.lat, b.lon]);
+      if (d > 3000 || d >= bd) return;
+      bd = d; best = { ...b, dist: d };
     });
     return best;
   }
@@ -505,7 +575,9 @@
 
     try {
       const pk = findSt(FC, 'pick', BT), dr = findSt(TC, 'drop', BT);
-      if (!pk) { ld.classList.remove('on'); err('Brak stacji z rowerami w pobliżu (3 km)'); return }
+      const fb = findFreeBike(FC, BT);
+      if (!pk && !fb) { ld.classList.remove('on'); err('Brak rowerów w pobliżu (3 km)'); return }
+      if (!pk) { ld.classList.remove('on'); err('Brak stacji z rowerami w pobliżu (3 km). Sprawdź wolny rower poniżej.'); return }
       if (!dr) { ld.classList.remove('on'); err('Brak stacji z dokami w pobliżu celu (3 km)'); return }
 
       const [s1, s2, s3] = await Promise.all([
@@ -554,6 +626,17 @@
         w += `<div class="warn">⚠️ Mało doków na <b>${dr.name}</b> (${dd}).${alt ? ` Alternatywa: <b>${alt.name}</b> (${alt.docks} doków)` : ''}</div>`;
       }
       document.getElementById('W').innerHTML = w;
+
+      // Free bike alternative
+      if (fb && fb.dist < (pk ? pk.dist : Infinity)) {
+        const rangeInfo = fb.range ? ` · zasięg ${(fb.range / 1000).toFixed(0)} km` : '';
+        const bikeType = fb.type === 'ebike' ? '⚡ Elektryczny' : '🚲 Klasyczny';
+        const uri = fb.uri?.android || fb.uri?.ios || '';
+        const reserveLink = uri ? `<a href="${uri}">zarezerwuj w MEVO</a>` : 'zarezerwuj w aplikacji MEVO';
+        ML.push(L.marker([fb.lat, fb.lon], { icon: ico('🚲', 22) }).addTo(map)
+          .bindPopup(`<b>Wolny rower</b><br>${bikeType}${rangeInfo}`));
+        document.getElementById('W').innerHTML += `<div class="warn" style="background:#d1fae5;border-color:#10b981">🚲 Wolny rower <b>${fb.dist < 1000 ? Math.round(fb.dist) + 'm' : (fb.dist / 1000).toFixed(1) + 'km'}</b> od startu (${bikeType}${rangeInfo}) — bliżej niż stacja! ${reserveLink}, bo mogą zabrać.</div>`;
+      }
 
       // Station cards
       document.getElementById('CS').innerHTML = `
