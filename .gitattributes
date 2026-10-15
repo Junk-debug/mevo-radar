@@ -1,0 +1,2 @@
+# The app logic lives in inline <script> blocks; report it as JavaScript, not HTML
+*.html linguist-detectable=false
