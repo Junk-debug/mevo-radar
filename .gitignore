@@ -1,4 +1,6 @@
 node_modules/
+dist/
 .wrangler/
 .dev.vars
-mevo-data.json
+.DS_Store
+.claude/
