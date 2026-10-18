@@ -3,6 +3,13 @@
   "name": "mevo-radar",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
+  // Custom domains: Cloudflare creates the DNS records and the HTTPS certificate on deploy.
+  // The zone must be active in this account first. www serves the same site as the apex.
+  "routes": [
+    { "pattern": "mevoradar.pl", "custom_domain": true },
+    { "pattern": "www.mevoradar.pl", "custom_domain": true }
+  ],
+  "workers_dev": true,
   "assets": {
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",

@@ -58,9 +58,11 @@ shared/types.ts API response types used by both sides
 - 1–2 → yellow warning (reserve in the MEVO app; alternative drop-off station with ≥3 docks)
 - 3+ → ok
 
-## Deploy setup (one-time)
-1. `npx wrangler kv namespace create MEVO_KV` and put the id into `wrangler.jsonc`.
-2. Repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` for the GitHub Action.
+## Deployment
+- Live at https://mevoradar.pl (also `www.` and https://mevo-radar.maks-naumovich2349.workers.dev). Domain registered at home.pl, DNS on Cloudflare (nameservers `angela`/`duke.ns.cloudflare.com`).
+- `wrangler.jsonc` holds the KV namespace id and the custom-domain routes — not secrets, keep them committed.
+- Pushes to `main` deploy via `.github/workflows/deploy.yml`; it needs repository secrets `CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers") and `CLOUDFLARE_ACCOUNT_ID`.
+- Manual deploy: `npx wrangler login` once, then `npm run deploy`.
 - Free-plan limits that shape the design: 1000 KV writes/day (hence cron every 2 min, 720/day), 50 subrequests per invocation (a full station scan uses ~21).
 
 ## Gotchas
