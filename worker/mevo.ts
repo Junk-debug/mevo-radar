@@ -6,7 +6,7 @@
 //   `dockGroupVehicles` has no "all stations" variant, so docked bikes are fetched by batching
 //   many aliased per-station fields into one query.
 
-import type { Bike, BikeType, Station } from "../shared/types";
+import type { Bike, BikeType, Station, SystemStats } from "../shared/types";
 
 const GBFS = "https://gbfs.urbansharing.com/rowermevo.pl";
 const GRAPHQL = "https://core.urbansharing.com/public/api/v1/graphql";
@@ -65,7 +65,7 @@ async function graphql<T>(query: string, variables: Record<string, unknown> = {}
   return body.data;
 }
 
-function toBike(v: GqlVehicle, lat: number, lon: number, stationId: string | null): Bike {
+function toBike(v: GqlVehicle, lat: number, lon: number, stationId: string | null, appId: string | null = null): Bike {
   return {
     number: v.number,
     type: (v.category === "ebike" ? "ebike" : "bike") as BikeType,
@@ -75,6 +75,7 @@ function toBike(v: GqlVehicle, lat: number, lon: number, stationId: string | nul
     lat,
     lon,
     stationId,
+    appId,
   };
 }
 
@@ -109,13 +110,60 @@ export async function fetchStations(): Promise<{ updated: number; stations: Stat
 }
 
 export async function fetchFreeBikes(): Promise<Bike[]> {
-  const data = await graphql<{ freeFloatingVehicles: GqlVehicle[] }>(
-    `query($systemId: ID!) { freeFloatingVehicles(systemId: $systemId) { ${VEHICLE_FIELDS} location { location { lat lng } } } }`,
-    { systemId: SYSTEM_ID },
-  );
+  const [data, gbfsBikes] = await Promise.all([
+    graphql<{ freeFloatingVehicles: GqlVehicle[] }>(
+      `query($systemId: ID!) { freeFloatingVehicles(systemId: $systemId) { ${VEHICLE_FIELDS} location { location { lat lng } } } }`,
+      { systemId: SYSTEM_ID },
+    ),
+    gbfs<{ bikes: { bike_id: string; lat: number; lon: number }[] }>("free_bike_status").catch(() => null),
+  ]);
+  // GraphQL has frame numbers, GBFS has the ids the MEVO app links use. Both report the same
+  // coordinates for the same bike, so join on exact position (ambiguous positions get no id).
+  const byPos = new Map<string, string | null>();
+  for (const b of gbfsBikes?.data.bikes ?? []) {
+    const key = `${b.lat},${b.lon}`;
+    byPos.set(key, byPos.has(key) ? null : b.bike_id);
+  }
   return data.freeFloatingVehicles
     .filter((v) => v.location)
-    .map((v) => toBike(v, v.location!.location.lat, v.location!.location.lng, null));
+    .map((v) => {
+      const { lat, lng } = v.location!.location;
+      return toBike(v, lat, lng, null, byPos.get(`${lat},${lng}`) ?? null);
+    });
+}
+
+export async function fetchSystemStats(): Promise<SystemStats> {
+  const data = await graphql<{
+    systemActiveTripCount: { count: number } | null;
+    systemStats: {
+      tripsToday: number;
+      tripsYesterday: number;
+      highscoreTrips: number;
+      tripsThisYear: number;
+      tripsLastYear: number;
+      uniqueUsersToday: number;
+      highscoreUniqueUsers: number;
+      highscoreUniqueUsersDate: string | null;
+      medianDurationToday: number;
+      medianDurationThisYear: number;
+    };
+  }>(`query { systemActiveTripCount { count } systemStats { tripsToday tripsYesterday highscoreTrips tripsThisYear tripsLastYear
+    uniqueUsersToday highscoreUniqueUsers highscoreUniqueUsersDate medianDurationToday medianDurationThisYear } }`);
+  const s = data.systemStats;
+  return {
+    updated: Math.floor(Date.now() / 1000),
+    activeTrips: data.systemActiveTripCount?.count ?? 0,
+    tripsToday: s.tripsToday,
+    tripsYesterday: s.tripsYesterday,
+    tripsThisYear: s.tripsThisYear,
+    tripsLastYear: s.tripsLastYear,
+    uniqueUsersToday: s.uniqueUsersToday,
+    recordTrips: s.highscoreTrips,
+    recordUsers: s.highscoreUniqueUsers,
+    recordUsersDate: s.highscoreUniqueUsersDate,
+    medianDurationToday: s.medianDurationToday,
+    medianDurationThisYear: s.medianDurationThisYear,
+  };
 }
 
 export async function fetchDockedBikes(): Promise<Bike[]> {

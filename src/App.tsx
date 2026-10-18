@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Bike } from "../shared/types";
-import { normalizeNumber, useAllBikes, useStations } from "./api";
+import { normalizeNumber, useAllBikes, useStations, useSystemStats } from "./api";
 import { BikePanel } from "./components/BikePanel";
 import { Credit } from "./components/Credit";
+import { LivePanel } from "./components/LivePanel";
 import { MapView, type CameraRequest, type MapMarker } from "./components/MapView";
 import type { PlaceValue } from "./components/PlaceInput";
 import { RoutePanel, type PlanStatus } from "./components/RoutePanel";
@@ -10,7 +11,7 @@ import { useI18n, type Lang } from "./i18n";
 import type { LatLon } from "./lib/geo";
 import { planTrip, stationPos, type BikePreference, type TripPlan } from "./lib/planner";
 
-type Tab = "route" | "bike";
+type Tab = "route" | "bike" | "live";
 const TRACK_KEY = "mevo.tracked";
 
 const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -44,6 +45,7 @@ export function App() {
   const all = useAllBikes();
 
   const [tab, setTab] = useState<Tab>(() => (location.hash.length > 1 ? "bike" : "route"));
+  const statsQuery = useSystemStats(tab === "live");
   const [expanded, setExpanded] = useState(true);
   const [camera, setCamera] = useState<CameraRequest | null>(null);
   const moveCamera = (c: Omit<CameraRequest, "key">) => setCamera({ ...c, key: Date.now() });
@@ -218,7 +220,7 @@ export function App() {
         </header>
 
         <nav className="tabs" role="tablist">
-          {(["route", "bike"] as Tab[]).map((v) => (
+          {(["route", "bike", "live"] as Tab[]).map((v) => (
             <button
               key={v}
               type="button"
@@ -230,14 +232,28 @@ export function App() {
                 setExpanded(true);
               }}
             >
-              {t(v === "route" ? "tabRoute" : "tabBike")}
+              {t(v === "route" ? "tabRoute" : v === "bike" ? "tabBike" : "tabLive")}
+              {v === "live" && <span className="tab-dot" aria-hidden="true" />}
             </button>
           ))}
         </nav>
 
         {!live && <p className="notice notice-error">{t("offline")}</p>}
 
-        {tab === "route" ? (
+        {tab === "live" ? (
+          <LivePanel
+            stats={statsQuery.data}
+            statsError={statsQuery.isError}
+            stations={stations}
+            bikes={all.list}
+            onStation={(id) => {
+              setSelectedStationId(id);
+              setTab("bike");
+              const s = stationsById.get(id);
+              if (s) moveCamera({ center: stationPos(s) });
+            }}
+          />
+        ) : tab === "route" ? (
           <RoutePanel
             from={from}
             to={to}

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import type { Bike, BikesResponse, StationsResponse } from "../shared/types";
+import type { Bike, BikesResponse, StationsResponse, SystemStats } from "../shared/types";
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(path);
@@ -16,6 +16,9 @@ export const useFreeBikes = () =>
 
 export const useDockedBikes = () =>
   useQuery({ queryKey: ["docked"], queryFn: () => get<BikesResponse>("/api/docked"), refetchInterval: 60_000 });
+
+export const useSystemStats = (enabled: boolean) =>
+  useQuery({ queryKey: ["stats"], queryFn: () => get<SystemStats>("/api/stats"), refetchInterval: 30_000, enabled });
 
 export const normalizeNumber = (s: string) => s.trim().toLowerCase().replace(/^#/, "").replace(/\s+/g, "");
 const bare = (n: string) => n.replace(/^e/, "").replace(/^0+/, "");

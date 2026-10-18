@@ -1,9 +1,12 @@
 # MEVO Radar
 
 ## What is this
-A web app for the Rowermevo city bike-sharing system (Trójmiasto — Gdańsk/Gdynia/Sopot) with two jobs on one map:
-1. **Route planner** — origin → destination as walk → MEVO station (bike) → station → walk, with a Google Maps link. Google Maps doesn't integrate MEVO.
-2. **Bike finder** — find a specific bike by the number on its frame (e.g. `e4937`, `0366`), at a station or parked outside one, and keep tracking it.
+A web app for the Rowermevo city bike-sharing system (Trójmiasto — Gdańsk/Gdynia/Sopot) with three tabs on one map:
+1. **Route planner (Trasa)** — origin → destination as walk → MEVO station (bike) → station → walk, with a Google Maps link. Google Maps doesn't integrate MEVO.
+2. **Bike finder (Rower)** — find a specific bike by the number on its frame (e.g. `e4937`, `0366`), at a station or parked outside one, and keep tracking it.
+3. **Live (Na żywo)** — system stats from MEVO (riding now, trips today, records, year over year) plus the fleet right now from our own data (available bikes, average battery, battery histogram, empty and fullest stations).
+
+On phones, "Open in MEVO" buttons open a station or a specific bike in the official app.
 
 UI languages: Polish (default for Polish browsers) and English. Unofficial — the UI says it is not affiliated with MEVO.
 
@@ -18,7 +21,8 @@ src/            React app (Vite + TypeScript)
   lib/planner.ts  station selection + trip planning
   lib/routing.ts  OSRM (FOSSGIS) routing and walking-distance table
   lib/geocode.ts  Nominatim search
-  components/     MapView (MapLibre), RoutePanel, BikePanel, PlaceInput, BikeChips,
+  lib/mevoApp.ts  deep links into the MEVO app (Android intent / iOS scheme + store fallback)
+  components/     MapView (MapLibre), RoutePanel, BikePanel, LivePanel, PlaceInput, BikeChips, OpenInMevo,
                   Credit (footer: author avatar loaded live from GitHub, repo link, disclaimer)
 worker/         Cloudflare Worker
   index.ts        routes, edge cache, cron handler
@@ -34,7 +38,8 @@ shared/types.ts API response types used by both sides
 | Route | Source | Freshness |
 |---|---|---|
 | `GET /api/stations` | GBFS `station_information` + `station_status` | edge cache 20 s |
-| `GET /api/bikes` | GraphQL `freeFloatingVehicles` — bikes outside stations, with numbers | edge cache 15 s |
+| `GET /api/bikes` | GraphQL `freeFloatingVehicles` — bikes outside stations, with numbers; `appId` joined from GBFS `free_bike_status` by exact coordinates | edge cache 15 s |
+| `GET /api/stats` | GraphQL `systemActiveTripCount` + `systemStats` | edge cache 30 s |
 | `GET /api/docked` | GraphQL `dockGroupVehicles` per station — bikes at stations, with numbers | KV, refreshed by cron every 2 min |
 
 ## Data sources
@@ -42,7 +47,9 @@ shared/types.ts API response types used by both sides
 - **Urban Sharing GraphQL** `https://core.urbansharing.com/public/api/v1/graphql` — what rowermevo.pl itself uses. Unofficial; needs headers `systemId: inurba-gdansk` and `Origin: https://rowermevo.pl` (CORS only allows rowermevo.pl, which is why it goes through the Worker).
   - `freeFloatingVehicles(systemId)` — bikes outside stations with `number`, `batteryCharge`, `currentRange`, `category`, `available`, `location`.
   - `dockGroupVehicles(dockGroupId)` — bikes at one station, no auth. No "all stations" variant, so the Worker batches ~40 aliased fields per query (~20 queries for a full scan, ~20 s). Station ids equal GBFS `station_id`.
+  - `systemActiveTripCount { count }` and `systemStats { tripsToday tripsYesterday highscoreTrips tripsThisYear tripsLastYear uniqueUsersToday highscoreUniqueUsers highscoreUniqueUsersDate medianDurationToday medianDurationThisYear }` — the numbers on rowermevo.pl's live page, no auth.
   - `vehicle(...)`, `trips` need a logged-in user token — not usable. Introspection is disabled.
+- **MEVO app links** — no https universal links; only the scheme `rowermevo://stations/<GBFS station_id>` and `rowermevo://vehicles/<GBFS bike_id>` (from GBFS `rental_uris`). Android package `com.urbansharing.citybike.gdansk`, iOS App Store id `6452801246` (GBFS `system_information.rental_apps`). GBFS bike ids are anonymised and rotate after every trip, so they are re-joined on every `/api/bikes` refresh.
 - **Nominatim** (OSM) — geocoding, bounded to the Tricity viewbox.
 - **OSRM by FOSSGIS** `https://routing.openstreetmap.de/routed-foot|routed-bike/...` — real foot and bike profiles. The OSRM demo server (`router.project-osrm.org`) ignores the profile and always routes by car — don't use it. FOSSGIS rate-limits bursts (HTTP 429), so use the `table` service for many distances at once.
 - **Map tiles** — OpenFreeMap vector styles (`positron` light, `dark` dark), no key.

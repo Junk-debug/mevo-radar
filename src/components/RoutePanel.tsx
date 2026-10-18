@@ -3,6 +3,7 @@ import { useI18n } from "../i18n";
 import { formatDistance, formatDuration } from "../lib/geo";
 import { bikesAt, googleMapsUrl, LOW_COUNT, type BikePreference, type TripPlan } from "../lib/planner";
 import { BikeChips } from "./BikeChips";
+import { OpenInMevo } from "./OpenInMevo";
 import { PlaceInput, type PlaceValue } from "./PlaceInput";
 
 export type PlanStatus = "idle" | "loading" | "noBikes" | "noDocks" | "failed" | "needBoth";
@@ -130,11 +131,16 @@ export function RoutePanel(p: Props) {
                   {pickupCount !== null && pickupCount <= LOW_COUNT && (
                     <p className="notice notice-warn">{t("lowBikes", { n: pickupCount })}</p>
                   )}
+                  <OpenInMevo target={{ kind: "station", id: plan.pickup.station.id }} className="btn mevo mevo-inline" />
                 </>
               ) : (
                 <>
                   <h3 className="stop-name mono">{plan.pickup.bike.number}</h3>
                   <BikeChips bikes={[plan.pickup.bike]} onPick={p.onBike} />
+                  <OpenInMevo
+                    target={plan.pickup.bike.appId ? { kind: "vehicle", id: plan.pickup.bike.appId } : { kind: "app" }}
+                    className="btn mevo mevo-inline"
+                  />
                 </>
               )}
             </li>

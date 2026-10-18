@@ -24,6 +24,7 @@ export interface Bike {
   lat: number;
   lon: number;
   stationId: string | null; // null = parked outside a station
+  appId: string | null; // GBFS bike id used by the MEVO app deep link (rowermevo://vehicles/<id>); outside stations only
 }
 
 export interface StationsResponse {
@@ -34,4 +35,20 @@ export interface StationsResponse {
 export interface BikesResponse {
   updated: number;
   bikes: Bike[];
+}
+
+/** System-wide numbers, the same ones rowermevo.pl shows on its live page. */
+export interface SystemStats {
+  updated: number;
+  activeTrips: number;
+  tripsToday: number;
+  tripsYesterday: number;
+  tripsThisYear: number;
+  tripsLastYear: number;
+  uniqueUsersToday: number;
+  recordTrips: number;
+  recordUsers: number;
+  recordUsersDate: string | null; // YYYY-MM-DD
+  medianDurationToday: number; // seconds
+  medianDurationThisYear: number; // seconds
 }

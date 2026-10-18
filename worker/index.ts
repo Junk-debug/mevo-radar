@@ -2,11 +2,12 @@
 //
 //   GET /api/stations  stations with live counts (GBFS), cached 20 s
 //   GET /api/bikes     bikes parked outside stations, with frame numbers, cached 15 s
+//   GET /api/stats     system-wide numbers (riding now, trips today, records), cached 30 s
 //   GET /api/docked    bikes standing at stations, with frame numbers — refreshed by the
 //                      cron trigger every 2 minutes and kept in KV (a full scan is ~20 requests)
 
 import type { BikesResponse, StationsResponse } from "../shared/types";
-import { fetchDockedBikes, fetchFreeBikes, fetchStations } from "./mevo";
+import { fetchDockedBikes, fetchFreeBikes, fetchStations, fetchSystemStats } from "./mevo";
 
 interface Env {
   MEVO_KV: KVNamespace;
@@ -50,6 +51,8 @@ async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<R
       return cached(request, ctx, 20, async (): Promise<StationsResponse> => fetchStations());
     case "/api/bikes":
       return cached(request, ctx, 15, async (): Promise<BikesResponse> => ({ updated: now(), bikes: await fetchFreeBikes() }));
+    case "/api/stats":
+      return cached(request, ctx, 30, fetchSystemStats);
     case "/api/docked": {
       const { value: stored, metadata } = await env.MEVO_KV.getWithMetadata<{ updated: number }>(DOCKED_KEY);
       // Before the first cron run (fresh deploy) scan on demand and wait for it.

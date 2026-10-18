@@ -5,6 +5,9 @@
 - **Route planner (Trasa).** Enter a start and a destination and get a walk → bike → walk trip: the pickup and drop-off stations are chosen by real walking distance, with bike availability, free docks and a link to open the route in Google Maps.
 - **Bike finder (Rower).** Type the number from a bike's frame (`e4937`, `0366`) and see where it is right now — at a station or parked anywhere — with its battery level. Tracking survives reloads, and `mevoradar.pl/#e4937` links straight to a bike.
 
+- **Live (Na żywo).** How many people are riding right now, trips today, records and the year so far — plus the fleet at this moment: available bikes, average e-bike battery, empty and fullest stations.
+- **Open in MEVO.** On phones, one tap opens the station or the exact bike in the official MEVO app (or its store page if it isn't installed).
+
 Polish and English, light and dark themes, works on phones.
 
 > Not affiliated with MEVO or Urban Sharing. Data comes from MEVO's public GBFS feed and the API behind rowermevo.pl, which may change without notice.
@@ -39,6 +42,7 @@ One Cloudflare Worker serves the React app and a small API:
 |---|---|---|
 | `/api/stations` | stations and live counts (GBFS) | 20 s |
 | `/api/bikes` | bikes outside stations, with numbers | 15 s |
+| `/api/stats` | riding now, trips today, records | 30 s |
 | `/api/docked` | bikes at stations, with numbers | 2 min (cron → KV) |
 
 The bike-number API only answers requests from rowermevo.pl and lists bikes one station at a time, so the Worker fetches it server-side and scans all stations on a 2-minute cron, keeping the result in KV.

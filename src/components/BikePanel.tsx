@@ -4,6 +4,7 @@ import { useI18n } from "../i18n";
 import { formatDistance, haversine } from "../lib/geo";
 import { stationPos, walkingDirectionsUrl } from "../lib/planner";
 import { BikeChips } from "./BikeChips";
+import { OpenInMevo } from "./OpenInMevo";
 
 interface Props {
   trackedNumber: string | null;
@@ -99,6 +100,11 @@ function TrackedCard(p: Props) {
         <p className="muted">{p.dockedLoaded ? t("notFoundHint") : ""}</p>
       )}
       <div className="actions">
+        {bike && (
+          <OpenInMevo
+            target={bike.appId ? { kind: "vehicle", id: bike.appId } : bike.stationId ? { kind: "station", id: bike.stationId } : { kind: "app" }}
+          />
+        )}
         {where && (
           <a className="btn" href={walkingDirectionsUrl([where.lat, where.lon])} target="_blank" rel="noopener">
             {t("walkThere")}
@@ -163,6 +169,9 @@ export function BikePanel(p: Props) {
             <p className="notice notice-warn">{t("numbersOutOfDate", { listed: listedAvailable, total: stationTotal })}</p>
           )}
           <BikeChips bikes={p.stationBikes} onPick={p.onTrack} selected={p.trackedNumber} />
+          <div className="actions">
+            <OpenInMevo target={{ kind: "station", id: p.selectedStation.id }} />
+          </div>
         </section>
       )}
     </div>
