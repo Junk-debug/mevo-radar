@@ -5,6 +5,7 @@ import { formatDistance, haversine } from "../lib/geo";
 import { stationPos, walkingDirectionsUrl } from "../lib/planner";
 import { BikeChips } from "./BikeChips";
 import { OpenInMevo } from "./OpenInMevo";
+import type { NearbyPlace } from "../lib/nearest";
 
 interface Props {
   trackedNumber: string | null;
@@ -17,6 +18,8 @@ interface Props {
   selectedStation: Station | null;
   stationBikes: Bike[];
   onSearch: (query: string) => void;
+  nearby: { loading: boolean; places: NearbyPlace[] | null; error: "location" | "none" | null };
+  onFindNearest: () => void;
   onTrack: (number: string) => void;
   onUntrack: () => void;
   onCloseStation: () => void;
@@ -147,9 +150,44 @@ export function BikePanel(p: Props) {
         />
         <button className="primary" type="submit">{t("find")}</button>
       </form>
-      {!p.trackedNumber && !p.selectedStation && <p className="hint">{t("bikeHint")}</p>}
+      <button type="button" className="nearest-btn" onClick={p.onFindNearest} disabled={p.nearby.loading}>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.5" fill="currentColor" />
+          <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+        {p.nearby.loading ? t("findingNearest") : t("nearestBike")}
+      </button>
 
-      {p.trackedNumber && <TrackedCard {...p} />}
+      {p.nearby.error && <p className="notice notice-warn">{t(p.nearby.error === "location" ? "nearestNeedsLocation" : "nearestNone")}</p>}
+
+      {p.nearby.places && p.nearby.places.length > 0 && (
+        <ol className="nearby">
+          {p.nearby.places.map((place, i) => (
+            <li key={place.key}>
+              <button type="button" onClick={() => p.onTrack(place.best.number)}>
+                <span className="nearby-rank">{i + 1}</span>
+                <span className="nearby-main">
+                  <span className="nearby-title">
+                    <b className="mono">{place.best.number}</b>
+                    {place.best.type === "ebike" && place.best.battery != null && <span className="muted"> · {place.best.battery}%</span>}
+                  </span>
+                  <span className="nearby-where">
+                    {place.station ? `${place.station.name} · ${t("bikesThere", { n: place.count })}` : t("outsideStation")}
+                  </span>
+                </span>
+                <span className="nearby-walk">
+                  <b>{place.minutes} min</b>
+                  <span className="muted">{formatDistance(place.walk)}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {!p.trackedNumber && !p.selectedStation && !p.nearby.places && <p className="hint">{t("bikeHint")}</p>}
+
+      {p.trackedNumber && !p.nearby.places?.length && <TrackedCard {...p} />}
 
       {p.selectedStation && (
         <section className="card station-card">

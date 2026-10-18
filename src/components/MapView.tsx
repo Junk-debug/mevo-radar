@@ -15,7 +15,7 @@ const STYLES = {
   dark: "https://tiles.openfreemap.org/styles/dark",
 };
 
-export type MarkerKind = "from" | "to" | "pickup" | "dropoff" | "bike";
+export type MarkerKind = "from" | "to" | "pickup" | "dropoff" | "bike" | "nearby";
 export interface MapMarker {
   kind: MarkerKind;
   pos: LatLon;
@@ -36,6 +36,8 @@ interface Props {
   plan: TripPlan | null;
   markers: MapMarker[];
   camera: CameraRequest | null;
+  /** The user's position ("you are here" dot), or null when unknown. */
+  me: LatLon | null;
   dimStations: boolean;
   onStationClick: (id: string) => void;
   onBikeClick: (number: string) => void;
@@ -180,6 +182,7 @@ export function MapView(props: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const markerRefs = useRef<Marker[]>([]);
+  const meMarker = useRef<Marker | null>(null);
   const latest = useRef(props);
   latest.current = props;
 
@@ -245,6 +248,22 @@ export function MapView(props: Props) {
         .addTo(map),
     );
   }, [props.markers]);
+
+  // One persistent marker that just moves, so GPS updates don't rebuild the other markers.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!props.me) {
+      meMarker.current?.remove();
+      meMarker.current = null;
+      return;
+    }
+    if (!meMarker.current) {
+      const el = document.createElement("div");
+      el.className = "mk-me";
+      meMarker.current = new Marker({ element: el }).setLngLat(ll(props.me)).addTo(map);
+    } else meMarker.current.setLngLat(ll(props.me));
+  }, [props.me]);
 
   useEffect(() => {
     const map = mapRef.current;

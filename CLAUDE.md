@@ -8,6 +8,8 @@ A web app for the Rowermevo city bike-sharing system (Trójmiasto — Gdańsk/Gd
 
 On phones, "Open in MEVO" buttons open a station or a specific bike in the official app.
 
+Also: "you are here" dot + locate button, "Nearest bike" (top 3 places by real walking time), installable as a PWA (manifest + icons, no service worker yet).
+
 UI languages: Polish (default for Polish browsers) and English. Unofficial — the UI says it is not affiliated with MEVO.
 
 ## Architecture
@@ -22,6 +24,8 @@ src/            React app (Vite + TypeScript)
   lib/routing.ts  OSRM (FOSSGIS) routing and walking-distance table
   lib/geocode.ts  Nominatim search
   lib/mevoApp.ts  deep links into the MEVO app (Android intent / iOS scheme + store fallback)
+  lib/useLocation.ts  user position: never prompts on load; silent if already granted; pauses when the tab is hidden
+  lib/nearest.ts  nearest places to pick up a bike (station or free bike), one OSRM table request; skips e-bikes < 15 %
   lib/useSheetDrag.ts  phone bottom sheet: swipe open/closed; it also collapses when the user pans/zooms the map.
                   On desktop the panel slides out via its header button and a pill reopens it.
   components/     MapView (MapLibre), RoutePanel, BikePanel, LivePanel, PlaceInput, BikeChips, OpenInMevo,
@@ -30,6 +34,7 @@ worker/         Cloudflare Worker
   index.ts        routes, edge cache, cron handler
   mevo.ts         upstream MEVO sources
 shared/types.ts API response types used by both sides
+public/         favicon, PWA manifest and icons (icons rendered from the brand mark SVG with sharp)
 ```
 
 - Dev: `npm run dev` — Vite with `@cloudflare/vite-plugin` runs the app and the Worker together (http://localhost:5173).
@@ -79,7 +84,7 @@ shared/types.ts API response types used by both sides
 - MapLibre 6 finds its web worker relative to its own bundle at runtime. `MapView.tsx` bundles it via `?worker&url` + `setWorkerUrl`, and `vite.config.ts` excludes `maplibre-gl` from dependency prebundling so the main thread and the worker share the same module code. Without both, the map stays blank.
 
 ## TODO
-- [ ] PWA manifest + service worker
+- [ ] Service worker (offline shell, push notifications) — the manifest and icons are done
 - [ ] Choose from multiple station options (top 3)
 - [ ] Trip cost calculation based on MEVO tariffs
 - [ ] ZTM integration (bus/tram + MEVO)

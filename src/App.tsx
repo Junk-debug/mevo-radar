@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSheetDrag } from "./lib/useSheetDrag";
+import { useLocation } from "./lib/useLocation";
+import { findNearest, type NearbyPlace } from "./lib/nearest";
 import type { Bike } from "../shared/types";
 import { normalizeNumber, useAllBikes, useStations, useSystemStats } from "./api";
 import { BikePanel } from "./components/BikePanel";
@@ -61,6 +63,13 @@ export function App() {
   const statsQuery = useSystemStats(tab === "live");
   const [expanded, setExpanded] = useState(true);
   const sheetRef = useRef<HTMLElement>(null);
+  const userLocation = useLocation();
+  const [locateHint, setLocateHint] = useState(false);
+  const [nearby, setNearby] = useState<{ loading: boolean; places: NearbyPlace[] | null; error: "location" | "none" | null }>({
+    loading: false,
+    places: null,
+    error: null,
+  });
   const dragHandlers = useSheetDrag(sheetRef, expanded, setExpanded);
   const [camera, setCamera] = useState<CameraRequest | null>(null);
   const moveCamera = (c: Omit<CameraRequest, "key">) => setCamera({ ...c, key: Date.now() });
@@ -95,6 +104,7 @@ export function App() {
 
   const track = (number: string) => {
     const key = all.resolve(number);
+    setNearby((n) => (n.places ? { loading: false, places: null, error: null } : n));
     setTracked(key);
     setTab("bike");
     setExpanded(true);
@@ -137,6 +147,28 @@ export function App() {
     }
   }, [all, tracked, tab]);
 
+  // Only an explicit tap asks for location; a refusal shows a short hint instead of re-prompting.
+  const locate = async (): Promise<LatLon | null> => {
+    const pos = userLocation.pos ?? (await userLocation.request());
+    if (!pos) {
+      setLocateHint(true);
+      setTimeout(() => setLocateHint(false), 5000);
+    }
+    return pos;
+  };
+
+  const showNearest = async () => {
+    resolvedOnce.current = true; // the user asked for nearby bikes; don't also fly to an old tracked bike
+    setTab("bike");
+    setExpanded(true);
+    setNearby({ loading: true, places: null, error: null });
+    const pos = await locate();
+    if (!pos) return setNearby({ loading: false, places: null, error: "location" });
+    const places = await findNearest(pos, all.list, stationsById);
+    setNearby({ loading: false, places, error: places.length ? null : "none" });
+    if (places.length) moveCamera({ bounds: [pos, ...places.map((p) => p.pos)] });
+  };
+
   const runPlan = async () => {
     if (!from || !to) return setStatus("needBoth");
     setStatus("loading");
@@ -164,6 +196,8 @@ export function App() {
 
   const markers = useMemo<MapMarker[]>(() => {
     if (tab === "bike") {
+      // While the nearest-bike list is open it owns the map; picking a place switches to tracking.
+      if (nearby.places?.length) return nearby.places.map((p, i) => ({ kind: "nearby" as const, pos: p.pos, label: String(i + 1) }));
       const b = trackedBike ?? lastSeen.current;
       return b ? [{ kind: "bike", pos: [b.lat, b.lon], label: b.number }] : [];
     }
@@ -174,7 +208,7 @@ export function App() {
     if (from) m.push({ kind: "from", pos: from.coords });
     if (to) m.push({ kind: "to", pos: to.coords });
     return m;
-  }, [tab, trackedBike, plan, from, to]);
+  }, [tab, trackedBike, plan, from, to, nearby.places]);
 
   const live = !stationsQuery.isError && !all.error;
   const totalBikes = stations.reduce((n, s) => n + s.bikes + s.ebikes, 0) + freeBikes.length;
@@ -188,6 +222,7 @@ export function App() {
         plan={tab === "route" ? plan : null}
         markers={markers}
         camera={camera}
+        me={userLocation.pos}
         dimStations={tab === "route" && plan !== null}
         onStationClick={(id) => {
           setSelectedStationId(id);
@@ -203,6 +238,24 @@ export function App() {
           if (isPhone()) setExpanded(false);
         }}
       />
+
+      <button
+        type="button"
+        className={`locate-btn${userLocation.pos ? " on" : ""}${userLocation.status === "locating" ? " busy" : ""}`}
+        onClick={async () => {
+          const pos = await locate();
+          if (pos) moveCamera({ center: pos, zoom: 16 });
+        }}
+        aria-label={t("whereAmI")}
+        title={t("whereAmI")}
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.5" fill="currentColor" />
+          <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      </button>
+      {locateHint && <p className="locate-hint" role="status">{t(userLocation.status === "denied" ? "locationDenied" : "locationUnavailable")}</p>}
 
       <button type="button" className="sheet-open" hidden={expanded} onClick={() => setExpanded(true)} aria-label={t("showPanel")}>
         <BrandMark />
@@ -323,6 +376,8 @@ export function App() {
             selectedStation={selectedStation}
             stationBikes={stationBikes}
             onSearch={track}
+            nearby={nearby}
+            onFindNearest={showNearest}
             onTrack={track}
             onUntrack={untrack}
             onCloseStation={() => setSelectedStationId(null)}

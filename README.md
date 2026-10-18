@@ -8,7 +8,9 @@
 - **Live (Na żywo).** How many people are riding right now, trips today, records and the year so far — plus the fleet at this moment: available bikes, average e-bike battery, empty and fullest stations.
 - **Open in MEVO.** On phones, one tap opens the station or the exact bike in the official MEVO app (or its store page if it isn't installed).
 
-Polish and English, light and dark themes, works on phones.
+- **Nearest bike.** One tap shows the three closest places to grab a bike, by real walking time, with the best battery at each. Location is only asked for when you tap.
+
+Polish and English, light and dark themes, works on phones — and installs to the home screen as an app.
 
 > Not affiliated with MEVO or Urban Sharing. Data comes from MEVO's public GBFS feed and the API behind rowermevo.pl, which may change without notice.
 

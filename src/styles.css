@@ -16,6 +16,7 @@
   --ebike: #0b8f8a;
   --bike: #3256d6;
   --walk: #0d1b2a;
+  --me: #1a73e8; /* the conventional "you are here" blue, distinct from classic bikes */
   --shadow: 0 18px 50px rgb(13 27 42 / 0.16), 0 2px 6px rgb(13 27 42 / 0.08);
 
   --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
@@ -43,6 +44,7 @@
     --ebike: #3fd0c8;
     --bike: #84a0ff;
     --walk: #d6e0ea;
+    --me: #4f9bff;
     --shadow: 0 18px 50px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
     color-scheme: dark;
   }
@@ -328,6 +330,31 @@ button { cursor: pointer; }
 .eyebrow { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 .station-card .muted { margin: 0; }
 
+/* ---------- Nearest bike ---------- */
+.nearest-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  padding: 11px 14px; border-radius: var(--r-md); border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font-weight: 600;
+}
+.nearest-btn svg { color: var(--me); }
+.nearest-btn:hover:not(:disabled) { border-color: var(--ink); }
+.nearest-btn:disabled { cursor: progress; color: var(--muted); }
+.nearby { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.nearby button {
+  width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  padding: 10px 12px; border: 0; border-radius: var(--r-md); background: var(--surface-2); text-align: left;
+}
+.nearby button:hover { box-shadow: inset 0 0 0 1px var(--line); }
+.nearby-rank {
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--ink); color: var(--surface); font: 800 11px var(--font-display);
+}
+.nearby-main { display: grid; min-width: 0; }
+.nearby-title b { font-size: 15px; }
+.nearby-where { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nearby-walk { display: grid; justify-items: end; font-size: 12px; }
+.nearby-walk b { font-size: 15px; }
+
 /* ---------- Open in MEVO ---------- */
 .btn.mevo {
   display: inline-flex; align-items: center; gap: 6px;
@@ -381,6 +408,33 @@ button { cursor: pointer; }
 .rank-count { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-weight: 700; font-size: 18px; }
 
 /* ---------- Map markers ---------- */
+.mk-me {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--me); border: 3px solid #fff;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--me) 22%, transparent), 0 1px 4px rgb(0 0 0 / 0.3);
+}
+.mk-nearby {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--ink); color: var(--surface); border: 2.5px solid var(--surface);
+  font: 800 12px var(--font-display); box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+}
+.locate-btn {
+  position: absolute; z-index: 1;
+  top: calc(80px + env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px));
+  width: 29px; height: 29px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 4px; background: #fff; color: #333;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1);
+}
+.locate-btn.on { color: var(--me); }
+.locate-btn.busy svg { animation: locate-spin 1s linear infinite; }
+@keyframes locate-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .locate-btn.busy svg { animation: none; } }
+.locate-hint {
+  position: absolute; z-index: 1;
+  top: calc(80px + env(safe-area-inset-top, 0px)); right: calc(max(10px, env(safe-area-inset-right, 0px)) + 38px);
+  max-width: 240px; padding: 8px 10px; border-radius: var(--r-sm);
+  background: var(--ink); color: var(--surface); font-size: 12.5px; box-shadow: var(--shadow);
+}
 .mk { display: grid; place-items: center; }
 .mk-from { width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 4px solid var(--ink); box-shadow: 0 2px 6px rgb(0 0 0 / 0.3); }
 .mk-to {
