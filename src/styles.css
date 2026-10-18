@@ -475,6 +475,8 @@ button { cursor: pointer; }
     transition: max-height 0.25s ease, transform 0.2s ease;
   }
   .sheet.collapsed { max-height: calc(118px + env(safe-area-inset-bottom, 0px)); }
+  .sheet.full { height: calc(100dvh - env(safe-area-inset-top, 0px) - 8px); max-height: none; }
+  .sheet.full .panel-body { flex: 1; align-content: start; }
   .sheet.dragging { transition: none; }
   .sheet-top { touch-action: none; cursor: grab; }
   .sheet.dragging .sheet-top { cursor: grabbing; }

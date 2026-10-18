@@ -1,25 +1,30 @@
 import { useRef, type MouseEvent, type PointerEvent, type RefObject } from "react";
 
+/** Phone bottom sheet height. On desktop only "peek" (hidden) vs anything else (shown) matters. */
+export type SheetState = "peek" | "half" | "full";
+
 const START = 6; // px of movement before a press becomes a drag (so taps on tabs still work)
-const CLOSE = 70; // drag down this far on an open sheet to collapse it
-const OPEN = 40; // swipe up this far on a collapsed sheet to open it
+const STEP = 60; // px to move one step (peek ↔ half ↔ full)
+const JUMP = 280; // px to skip a step (full → peek, peek → full)
 
 /**
- * Swipe the phone bottom sheet open/closed by its top area (grabber, header, tabs).
- * While open, the sheet follows the finger downwards; on release it snaps.
+ * Swipe the phone bottom sheet between peek, half and full screen by its top area
+ * (grabber, header, tabs). Dragging down moves the sheet with the finger; dragging up from
+ * "half" grows it live; on release it snaps to the next state in the swipe direction.
  */
-export function useSheetDrag(sheet: RefObject<HTMLElement | null>, open: boolean, setOpen: (v: boolean) => void) {
-  const drag = useRef<{ y: number; id: number; active: boolean } | null>(null);
+export function useSheetDrag(sheet: RefObject<HTMLElement | null>, state: SheetState, setState: (s: SheetState) => void) {
+  const drag = useRef<{ y: number; id: number; active: boolean; height: number } | null>(null);
   const justDragged = useRef(false);
 
   const onPointerDown = (e: PointerEvent) => {
     if (!window.matchMedia("(max-width: 899px)").matches || e.button !== 0) return;
-    drag.current = { y: e.clientY, id: e.pointerId, active: false };
+    drag.current = { y: e.clientY, id: e.pointerId, active: false, height: sheet.current?.offsetHeight ?? 0 };
   };
 
   const onPointerMove = (e: PointerEvent) => {
     const d = drag.current;
-    if (!d || d.id !== e.pointerId) return;
+    const el = sheet.current;
+    if (!d || d.id !== e.pointerId || !el) return;
     const dy = e.clientY - d.y;
     if (!d.active && Math.abs(dy) > START) {
       d.active = true;
@@ -28,9 +33,11 @@ export function useSheetDrag(sheet: RefObject<HTMLElement | null>, open: boolean
       } catch {
         // pointer already released; the drag still works without capture
       }
-      sheet.current?.classList.add("dragging");
+      el.classList.add("dragging");
     }
-    if (d.active && open && sheet.current) sheet.current.style.transform = `translateY(${Math.max(0, dy)}px)`;
+    if (!d.active) return;
+    if (dy > 0 && state !== "peek") el.style.transform = `translateY(${dy}px)`;
+    else if (dy < 0 && state === "half") el.style.maxHeight = `${Math.min(window.innerHeight, d.height - dy)}px`;
   };
 
   const end = (e: PointerEvent) => {
@@ -38,12 +45,16 @@ export function useSheetDrag(sheet: RefObject<HTMLElement | null>, open: boolean
     drag.current = null;
     if (!d?.active) return;
     const dy = e.clientY - d.y;
-    if (sheet.current) {
-      sheet.current.style.transform = "";
-      sheet.current.classList.remove("dragging");
+    const el = sheet.current;
+    if (el) {
+      el.style.transform = "";
+      el.style.maxHeight = "";
+      el.classList.remove("dragging");
     }
-    if (open && dy > CLOSE) setOpen(false);
-    else if (!open && dy < -OPEN) setOpen(true);
+    if (dy > JUMP && state === "full") setState("peek");
+    else if (dy > STEP) setState(state === "full" ? "half" : "peek");
+    else if (dy < -JUMP && state === "peek") setState("full");
+    else if (dy < -STEP) setState(state === "peek" ? "half" : "full");
     justDragged.current = true;
     setTimeout(() => (justDragged.current = false), 0);
   };

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSheetDrag } from "./lib/useSheetDrag";
+import { useSheetDrag, type SheetState } from "./lib/useSheetDrag";
 import { useLocation } from "./lib/useLocation";
 import { findNearest, type NearbyPlace } from "./lib/nearest";
 import type { Bike } from "../shared/types";
@@ -61,7 +61,10 @@ export function App() {
 
   const [tab, setTab] = useState<Tab>(() => (location.hash.length > 1 ? "bike" : "route"));
   const statsQuery = useSystemStats(tab === "live");
-  const [expanded, setExpanded] = useState(true);
+  const [sheet, setSheet] = useState<SheetState>("half");
+  const expanded = sheet !== "peek";
+  const openSheet = () => setSheet((s) => (s === "peek" ? "half" : s)); // keep full screen if it already is
+  const toggleSheet = () => setSheet((s) => (s === "peek" ? "half" : "peek"));
   const sheetRef = useRef<HTMLElement>(null);
   const userLocation = useLocation();
   const [locateHint, setLocateHint] = useState(false);
@@ -70,7 +73,7 @@ export function App() {
     places: null,
     error: null,
   });
-  const dragHandlers = useSheetDrag(sheetRef, expanded, setExpanded);
+  const dragHandlers = useSheetDrag(sheetRef, sheet, setSheet);
   const [camera, setCamera] = useState<CameraRequest | null>(null);
   const moveCamera = (c: Omit<CameraRequest, "key">) => setCamera({ ...c, key: Date.now() });
 
@@ -107,7 +110,7 @@ export function App() {
     setNearby((n) => (n.places ? { loading: false, places: null, error: null } : n));
     setTracked(key);
     setTab("bike");
-    setExpanded(true);
+    openSheet();
     history.replaceState(null, "", `#${key}`);
     try {
       localStorage.setItem(TRACK_KEY, key);
@@ -160,7 +163,7 @@ export function App() {
   const showNearest = async () => {
     resolvedOnce.current = true; // the user asked for nearby bikes; don't also fly to an old tracked bike
     setTab("bike");
-    setExpanded(true);
+    openSheet();
     setNearby({ loading: true, places: null, error: null });
     const pos = await locate();
     if (!pos) return setNearby({ loading: false, places: null, error: "location" });
@@ -227,7 +230,7 @@ export function App() {
         onStationClick={(id) => {
           setSelectedStationId(id);
           setTab("bike");
-          setExpanded(true);
+          openSheet();
           const s = stationsById.get(id);
           if (s) moveCamera({ center: stationPos(s) });
         }}
@@ -235,7 +238,7 @@ export function App() {
         onMapClick={onMapClick}
         onUserMove={() => {
           // On phones the sheet covers half the map; get out of the way while the user explores.
-          if (isPhone()) setExpanded(false);
+          if (isPhone()) setSheet("peek");
         }}
       />
 
@@ -257,7 +260,7 @@ export function App() {
       </button>
       {locateHint && <p className="locate-hint" role="status">{t(userLocation.status === "denied" ? "locationDenied" : "locationUnavailable")}</p>}
 
-      <button type="button" className="sheet-open" hidden={expanded} onClick={() => setExpanded(true)} aria-label={t("showPanel")}>
+      <button type="button" className="sheet-open" hidden={expanded} onClick={openSheet} aria-label={t("showPanel")}>
         <BrandMark />
         <span>{t("appName")}</span>
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -265,13 +268,13 @@ export function App() {
         </svg>
       </button>
 
-      <aside ref={sheetRef} className={`sheet${expanded ? "" : " collapsed"}`} aria-hidden={!expanded && !isPhone()}>
+      <aside ref={sheetRef} className={`sheet${expanded ? "" : " collapsed"}${sheet === "full" ? " full" : ""}`} aria-hidden={!expanded && !isPhone()}>
         <div className="sheet-top" {...dragHandlers}>
           <button
             type="button"
             className="grabber"
-            onClick={() => setExpanded((e) => !e)}
-            aria-label={expanded ? t("hidePanel") : t("showPanel")}
+            onClick={() => setSheet((s) => (s === "half" ? "full" : "half"))}
+            aria-label={sheet === "half" ? t("fullScreen") : t("halfScreen")}
             aria-expanded={expanded}
           />
           <header className="sheet-head">
@@ -295,7 +298,7 @@ export function App() {
               <button
                 type="button"
                 className="icon-btn collapse-btn"
-                onClick={() => setExpanded((e) => !e)}
+                onClick={toggleSheet}
                 aria-label={expanded ? t("hidePanel") : t("showPanel")}
                 title={expanded ? t("hidePanel") : t("showPanel")}
               >
@@ -316,7 +319,7 @@ export function App() {
                 className={tab === v ? "on" : ""}
                 onClick={() => {
                   setTab(v);
-                  setExpanded(true);
+                  openSheet();
                 }}
               >
                 {t(v === "route" ? "tabRoute" : v === "bike" ? "tabBike" : "tabLive")}

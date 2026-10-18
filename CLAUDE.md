@@ -26,7 +26,7 @@ src/            React app (Vite + TypeScript)
   lib/mevoApp.ts  deep links into the MEVO app (Android intent / iOS scheme + store fallback)
   lib/useLocation.ts  user position: never prompts on load; silent if already granted; pauses when the tab is hidden
   lib/nearest.ts  nearest places to pick up a bike (station or free bike), one OSRM table request; skips e-bikes < 15 %
-  lib/useSheetDrag.ts  phone bottom sheet: swipe open/closed; it also collapses when the user pans/zooms the map.
+  lib/useSheetDrag.ts  phone bottom sheet: swipe between peek / half / full screen; collapses when the user pans/zooms the map.
                   On desktop the panel slides out via its header button and a pill reopens it.
   components/     MapView (MapLibre), RoutePanel, BikePanel, LivePanel, PlaceInput, BikeChips, OpenInMevo,
                   Credit (footer: author avatar loaded live from GitHub, repo link, disclaimer)
