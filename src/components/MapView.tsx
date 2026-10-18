@@ -40,6 +40,8 @@ interface Props {
   onStationClick: (id: string) => void;
   onBikeClick: (number: string) => void;
   onMapClick: (pos: LatLon) => void;
+  /** The user started panning/zooming the map themselves (not a programmatic camera move). */
+  onUserMove: () => void;
 }
 
 const ll = ([lat, lon]: LatLon): [number, number] => [lon, lat];
@@ -213,6 +215,10 @@ export function MapView(props: Props) {
       map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
     }
+    map.on("dragstart", () => latest.current.onUserMove());
+    map.on("zoomstart", (e) => {
+      if ((e as { originalEvent?: Event }).originalEvent) latest.current.onUserMove();
+    });
     map.on("click", (e: MapMouseEvent) => {
       const hit = map.queryRenderedFeatures(e.point, { layers: ["bikes", "stations"] })[0];
       if (hit?.layer.id === "bikes") latest.current.onBikeClick(String(hit.properties.number));
@@ -244,9 +250,13 @@ export function MapView(props: Props) {
     const map = mapRef.current;
     const cam = props.camera;
     if (!map || !cam) return;
+    // Keep the target out from under the panel, whatever state it is in. Read the layout box
+    // (offset*, not getBoundingClientRect) so an in-progress open/close transition doesn't skew it.
+    const sheet = document.querySelector<HTMLElement>(".sheet");
+    const open = sheet && !sheet.classList.contains("collapsed");
     const padding = window.innerWidth >= 900
-      ? { top: 60, bottom: 60, left: 460, right: 60 }
-      : { top: 60, bottom: window.innerHeight * 0.5, left: 40, right: 40 };
+      ? { top: 60, bottom: 60, left: open ? sheet.offsetLeft + sheet.offsetWidth + 40 : 60, right: 60 }
+      : { top: 60, bottom: (open ? window.innerHeight * 0.64 : 130) + 20, left: 40, right: 40 };
     if (cam.bounds?.length) {
       const b = new LngLatBounds();
       cam.bounds.forEach((p) => b.extend(ll(p)));

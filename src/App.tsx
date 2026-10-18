@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSheetDrag } from "./lib/useSheetDrag";
 import type { Bike } from "../shared/types";
 import { normalizeNumber, useAllBikes, useStations, useSystemStats } from "./api";
 import { BikePanel } from "./components/BikePanel";
@@ -15,6 +16,18 @@ type Tab = "route" | "bike" | "live";
 const TRACK_KEY = "mevo.tracked";
 
 const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+const isPhone = () => window.matchMedia("(max-width: 899px)").matches;
+
+function BrandMark() {
+  return (
+    <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="9" />
+      <circle cx="9.5" cy="20" r="5" />
+      <circle cx="22.5" cy="20" r="5" />
+      <path d="M9.5 20l5-8.5h6.5l1.5 8.5M12.5 11.5h4.5" />
+    </svg>
+  );
+}
 
 function useSystemTheme() {
   const [dark, setDark] = useState(darkQuery.matches);
@@ -47,6 +60,8 @@ export function App() {
   const [tab, setTab] = useState<Tab>(() => (location.hash.length > 1 ? "bike" : "route"));
   const statsQuery = useSystemStats(tab === "live");
   const [expanded, setExpanded] = useState(true);
+  const sheetRef = useRef<HTMLElement>(null);
+  const dragHandlers = useSheetDrag(sheetRef, expanded, setExpanded);
   const [camera, setCamera] = useState<CameraRequest | null>(null);
   const moveCamera = (c: Omit<CameraRequest, "key">) => setCamera({ ...c, key: Date.now() });
 
@@ -183,60 +198,80 @@ export function App() {
         }}
         onBikeClick={track}
         onMapClick={onMapClick}
+        onUserMove={() => {
+          // On phones the sheet covers half the map; get out of the way while the user explores.
+          if (isPhone()) setExpanded(false);
+        }}
       />
 
-      <aside className={`sheet${expanded ? "" : " collapsed"}`}>
-        <button
-          type="button"
-          className="grabber"
-          onClick={() => setExpanded((e) => !e)}
-          aria-label={expanded ? t("close") : t("appName")}
-          aria-expanded={expanded}
-        />
-        <header className="sheet-head">
-          <div className="brand">
-            <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-              <rect width="32" height="32" rx="9" />
-              <circle cx="9.5" cy="20" r="5" />
-              <circle cx="22.5" cy="20" r="5" />
-              <path d="M9.5 20l5-8.5h6.5l1.5 8.5M12.5 11.5h4.5" />
-            </svg>
-            <div className="brand-text">
-              <span className="brand-name">{t("appName")}</span>
-              <span className={`live${live ? "" : " off"}`} title={live ? t("liveData") : t("offline")}>
-                {stations.length > 0 ? t("stationsCount", { s: stations.length, b: totalBikes }) : "…"}
-              </span>
-            </div>
-          </div>
-          <div className="head-tools">
-            <div className="lang" role="group" aria-label={t("language")}>
-              {(["pl", "en"] as Lang[]).map((l) => (
-                <button key={l} type="button" className={lang === l ? "on" : ""} aria-pressed={lang === l} onClick={() => setLang(l)}>
-                  {l.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-        </header>
+      <button type="button" className="sheet-open" hidden={expanded} onClick={() => setExpanded(true)} aria-label={t("showPanel")}>
+        <BrandMark />
+        <span>{t("appName")}</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
 
-        <nav className="tabs" role="tablist">
-          {(["route", "bike", "live"] as Tab[]).map((v) => (
-            <button
-              key={v}
-              type="button"
-              role="tab"
-              aria-selected={tab === v}
-              className={tab === v ? "on" : ""}
-              onClick={() => {
-                setTab(v);
-                setExpanded(true);
-              }}
-            >
-              {t(v === "route" ? "tabRoute" : v === "bike" ? "tabBike" : "tabLive")}
-              {v === "live" && <span className="tab-dot" aria-hidden="true" />}
-            </button>
-          ))}
-        </nav>
+      <aside ref={sheetRef} className={`sheet${expanded ? "" : " collapsed"}`} aria-hidden={!expanded && !isPhone()}>
+        <div className="sheet-top" {...dragHandlers}>
+          <button
+            type="button"
+            className="grabber"
+            onClick={() => setExpanded((e) => !e)}
+            aria-label={expanded ? t("hidePanel") : t("showPanel")}
+            aria-expanded={expanded}
+          />
+          <header className="sheet-head">
+            <div className="brand">
+              <BrandMark />
+              <div className="brand-text">
+                <span className="brand-name">{t("appName")}</span>
+                <span className={`live${live ? "" : " off"}`} title={live ? t("liveData") : t("offline")}>
+                  {stations.length > 0 ? t("stationsCount", { s: stations.length, b: totalBikes }) : "…"}
+                </span>
+              </div>
+            </div>
+            <div className="head-tools">
+              <div className="lang" role="group" aria-label={t("language")}>
+                {(["pl", "en"] as Lang[]).map((l) => (
+                  <button key={l} type="button" className={lang === l ? "on" : ""} aria-pressed={lang === l} onClick={() => setLang(l)}>
+                    {l.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="icon-btn collapse-btn"
+                onClick={() => setExpanded((e) => !e)}
+                aria-label={expanded ? t("hidePanel") : t("showPanel")}
+                title={expanded ? t("hidePanel") : t("showPanel")}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          <nav className="tabs" role="tablist">
+            {(["route", "bike", "live"] as Tab[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={tab === v}
+                className={tab === v ? "on" : ""}
+                onClick={() => {
+                  setTab(v);
+                  setExpanded(true);
+                }}
+              >
+                {t(v === "route" ? "tabRoute" : v === "bike" ? "tabBike" : "tabLive")}
+                {v === "live" && <span className="tab-dot" aria-hidden="true" />}
+              </button>
+            ))}
+          </nav>
+        </div>
 
         {!live && <p className="notice notice-error">{t("offline")}</p>}
 

@@ -85,6 +85,28 @@ button { cursor: pointer; }
   overflow: hidden;
 }
 .grabber { display: none; }
+.sheet-top { flex: none; }
+.collapse-btn svg { transition: transform 0.2s ease; }
+.sheet-open { display: none; }
+
+/* Desktop: the panel slides out to the left; a pill brings it back. */
+@media (min-width: 900px) {
+  .sheet { transition: transform 0.28s cubic-bezier(.2, .7, .2, 1), opacity 0.2s ease, visibility 0s linear 0s; }
+  .sheet.collapsed {
+    transform: translateX(calc(-100% - 40px)); opacity: 0; visibility: hidden; pointer-events: none;
+    transition: transform 0.28s cubic-bezier(.2, .7, .2, 1), opacity 0.2s ease, visibility 0s linear 0.28s;
+  }
+  .sheet-open {
+    position: absolute; z-index: 2;
+    top: calc(16px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px));
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 12px 8px 8px; border: 0; border-radius: 999px;
+    background: var(--surface); color: var(--ink); box-shadow: var(--shadow);
+    font: 800 15px/1 var(--font-display);
+  }
+  .sheet-open[hidden] { display: none; }
+  .sheet-open .brand-mark { width: 28px; height: 28px; }
+}
 .sheet-head {
   display: flex;
   align-items: center;
@@ -396,9 +418,15 @@ button { cursor: pointer; }
     padding-bottom: env(safe-area-inset-bottom, 0px);
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
-    transition: max-height 0.25s ease;
+    transition: max-height 0.25s ease, transform 0.2s ease;
   }
   .sheet.collapsed { max-height: calc(118px + env(safe-area-inset-bottom, 0px)); }
+  .sheet.dragging { transition: none; }
+  .sheet-top { touch-action: none; cursor: grab; }
+  .sheet.dragging .sheet-top { cursor: grabbing; }
+  /* The same button reads as "down" (hide) when open and "up" (show) when collapsed. */
+  .collapse-btn svg { transform: rotate(-90deg); }
+  .sheet.collapsed .collapse-btn svg { transform: rotate(90deg); }
   .sheet.collapsed .panel-body, .sheet.collapsed > .notice, .sheet.collapsed .sheet-foot { display: none; }
   .grabber {
     display: block; width: 100%; height: 18px; border: 0; background: none; padding: 0; flex: none;

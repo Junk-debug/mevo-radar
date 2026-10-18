@@ -22,6 +22,8 @@ src/            React app (Vite + TypeScript)
   lib/routing.ts  OSRM (FOSSGIS) routing and walking-distance table
   lib/geocode.ts  Nominatim search
   lib/mevoApp.ts  deep links into the MEVO app (Android intent / iOS scheme + store fallback)
+  lib/useSheetDrag.ts  phone bottom sheet: swipe open/closed; it also collapses when the user pans/zooms the map.
+                  On desktop the panel slides out via its header button and a pill reopens it.
   components/     MapView (MapLibre), RoutePanel, BikePanel, LivePanel, PlaceInput, BikeChips, OpenInMevo,
                   Credit (footer: author avatar loaded live from GitHub, repo link, disclaimer)
 worker/         Cloudflare Worker

@@ -90,6 +90,8 @@ const pl = {
   offline: "Brak połączenia z MEVO",
   language: "Język",
   close: "Zamknij",
+  hidePanel: "Schowaj panel",
+  showPanel: "Pokaż panel",
   stationsCount: "{s} {s:stacja|stacje|stacji} · {b} {b:rower|rowery|rowerów}",
   numbersOutOfDate: "Na stacji jest teraz {total}, a na liście numerów {listed} — lista odświeża się co ok. 2 min.",
 };
@@ -187,6 +189,8 @@ const en: Dict = {
   offline: "Can't reach MEVO",
   language: "Language",
   close: "Close",
+  hidePanel: "Hide panel",
+  showPanel: "Show panel",
   stationsCount: "{s} {s:station|stations} · {b} {b:bike|bikes}",
   numbersOutOfDate: "The station has {total} now, the number list shows {listed} — it refreshes about every 2 min.",
 };
