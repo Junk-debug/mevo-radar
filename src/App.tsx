@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Bike } from "../shared/types";
 import { normalizeNumber, useAllBikes, useStations } from "./api";
 import { BikePanel } from "./components/BikePanel";
+import { Credit } from "./components/Credit";
 import { MapView, type CameraRequest, type MapMarker } from "./components/MapView";
 import type { PlaceValue } from "./components/PlaceInput";
 import { RoutePanel, type PlanStatus } from "./components/RoutePanel";
@@ -276,7 +277,7 @@ export function App() {
             onCloseStation={() => setSelectedStationId(null)}
           />
         )}
-        <footer className="sheet-foot">{t("unofficial")}</footer>
+        <Credit />
       </aside>
     </div>
   );

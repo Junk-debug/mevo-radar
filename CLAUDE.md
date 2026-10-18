@@ -18,7 +18,8 @@ src/            React app (Vite + TypeScript)
   lib/planner.ts  station selection + trip planning
   lib/routing.ts  OSRM (FOSSGIS) routing and walking-distance table
   lib/geocode.ts  Nominatim search
-  components/     MapView (MapLibre), RoutePanel, BikePanel, PlaceInput, BikeChips
+  components/     MapView (MapLibre), RoutePanel, BikePanel, PlaceInput, BikeChips,
+                  Credit (footer: author avatar from GitHub in a spinning bike wheel, repo link, disclaimer)
 worker/         Cloudflare Worker
   index.ts        routes, edge cache, cron handler
   mevo.ts         upstream MEVO sources
@@ -61,7 +62,7 @@ shared/types.ts API response types used by both sides
 ## Deployment
 - Live at https://mevoradar.pl (also `www.` and https://mevo-radar.maks-naumovich2349.workers.dev). Domain registered at home.pl, DNS on Cloudflare (nameservers `angela`/`duke.ns.cloudflare.com`).
 - `wrangler.jsonc` holds the KV namespace id and the custom-domain routes — not secrets, keep them committed.
-- Pushes to `main` deploy via `.github/workflows/deploy.yml`; it needs repository secrets `CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers") and `CLOUDFLARE_ACCOUNT_ID`.
+- Pushes to `main` deploy via `.github/workflows/deploy.yml`; it needs repository secrets `CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers") and `CLOUDFLARE_ACCOUNT_ID`. Each run is recorded as a `production` deployment (URL on the run page and in the repo sidebar) and writes a job summary with the live URLs, commit and Worker version.
 - Manual deploy: `npx wrangler login` once, then `npm run deploy`.
 - Free-plan limits that shape the design: 1000 KV writes/day (hence cron every 2 min, 720/day), 50 subrequests per invocation (a full station scan uses ~21).
 

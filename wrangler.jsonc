@@ -16,7 +16,7 @@
     "run_worker_first": ["/api/*"]
   },
   "kv_namespaces": [
-    // Create with: npx wrangler kv namespace create MEVO_KV — then paste the id here.
+    // Created with `npx wrangler kv namespace create MEVO_KV`. An id, not a secret.
     { "binding": "MEVO_KV", "id": "2f525e40e5bf424da844ef4a2b25c101" }
   ],
   "triggers": {

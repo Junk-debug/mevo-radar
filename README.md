@@ -61,4 +61,6 @@ More detail for contributors (data sources, gotchas, limits) is in [CLAUDE.md](C
 
 ## Credits
 
+Made in Gdańsk by [Maksim Navumovich](https://github.com/Junk-debug).
+
 Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors · tiles by [OpenFreeMap](https://openfreemap.org) · bike data © MEVO / Urban Sharing.
