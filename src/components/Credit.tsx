@@ -7,38 +7,13 @@ const AUTHOR = {
 };
 const REPO = "https://github.com/Junk-debug/mevo-radar";
 
-const SPOKES = Array.from({ length: 16 }, (_, i) => (i * 360) / 16);
-
-/** The author's GitHub avatar as the hub of a bike wheel that rolls on hover. */
-function Wheel() {
-  return (
-    <svg className="wheel" viewBox="0 0 48 48" aria-hidden="true">
-      <defs>
-        <clipPath id="wheel-hub">
-          <circle cx="24" cy="24" r="15" />
-        </clipPath>
-      </defs>
-      <g className="wheel-spin">
-        {SPOKES.map((deg) => (
-          <line key={deg} className="wheel-spoke" x1="24" y1="9" x2="24" y2="3.6" transform={`rotate(${deg} 24 24)`} />
-        ))}
-        <circle className="wheel-tire" cx="24" cy="24" r="22" />
-        <circle className="wheel-tread" cx="24" cy="24" r="22" pathLength="48" />
-        <circle className="wheel-valve" cx="24" cy="2.6" r="1.6" />
-      </g>
-      <image href={AUTHOR.avatar} x="9" y="9" width="30" height="30" clipPath="url(#wheel-hub)" preserveAspectRatio="xMidYMid slice" />
-      <circle className="wheel-hub-ring" cx="24" cy="24" r="15" />
-    </svg>
-  );
-}
-
 export function Credit() {
   const { t } = useI18n();
   return (
     <footer className="sheet-foot">
       <div className="credit">
         <a className="credit-author" href={AUTHOR.profile} target="_blank" rel="noopener">
-          <Wheel />
+          <img className="credit-avatar" src={AUTHOR.avatar} alt="" width={36} height={36} loading="lazy" />
           <span className="credit-text">
             <span className="credit-label">{t("madeBy")}</span>
             <span className="credit-name">{AUTHOR.name}</span>

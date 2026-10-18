@@ -19,7 +19,7 @@ src/            React app (Vite + TypeScript)
   lib/routing.ts  OSRM (FOSSGIS) routing and walking-distance table
   lib/geocode.ts  Nominatim search
   components/     MapView (MapLibre), RoutePanel, BikePanel, PlaceInput, BikeChips,
-                  Credit (footer: author avatar from GitHub in a spinning bike wheel, repo link, disclaimer)
+                  Credit (footer: author avatar loaded live from GitHub, repo link, disclaimer)
 worker/         Cloudflare Worker
   index.ts        routes, edge cache, cron handler
   mevo.ts         upstream MEVO sources
