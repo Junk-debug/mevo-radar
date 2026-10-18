@@ -7,27 +7,27 @@ const AUTHOR = {
 };
 const REPO = "https://github.com/Junk-debug/mevo-radar";
 
-const SPOKES = Array.from({ length: 12 }, (_, i) => (i * 360) / 12);
+const SPOKES = Array.from({ length: 16 }, (_, i) => (i * 360) / 16);
 
-/** The author's GitHub avatar as the hub of a bike wheel that spins on hover. */
+/** The author's GitHub avatar as the hub of a bike wheel that rolls on hover. */
 function Wheel() {
   return (
     <svg className="wheel" viewBox="0 0 48 48" aria-hidden="true">
       <defs>
         <clipPath id="wheel-hub">
-          <circle cx="24" cy="24" r="11" />
+          <circle cx="24" cy="24" r="15" />
         </clipPath>
       </defs>
       <g className="wheel-spin">
-        <circle className="wheel-tire" cx="24" cy="24" r="21.5" />
-        <circle className="wheel-rim" cx="24" cy="24" r="18.5" />
         {SPOKES.map((deg) => (
-          <line key={deg} className="wheel-spoke" x1="24" y1="12.5" x2="24" y2="5.5" transform={`rotate(${deg} 24 24)`} />
+          <line key={deg} className="wheel-spoke" x1="24" y1="9" x2="24" y2="3.6" transform={`rotate(${deg} 24 24)`} />
         ))}
-        <circle className="wheel-valve" cx="24" cy="4.2" r="1.4" />
+        <circle className="wheel-tire" cx="24" cy="24" r="22" />
+        <circle className="wheel-tread" cx="24" cy="24" r="22" pathLength="48" />
+        <circle className="wheel-valve" cx="24" cy="2.6" r="1.6" />
       </g>
-      <image href={AUTHOR.avatar} x="13" y="13" width="22" height="22" clipPath="url(#wheel-hub)" preserveAspectRatio="xMidYMid slice" />
-      <circle className="wheel-hub-ring" cx="24" cy="24" r="11" />
+      <image href={AUTHOR.avatar} x="9" y="9" width="30" height="30" clipPath="url(#wheel-hub)" preserveAspectRatio="xMidYMid slice" />
+      <circle className="wheel-hub-ring" cx="24" cy="24" r="15" />
     </svg>
   );
 }
