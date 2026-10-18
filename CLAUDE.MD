@@ -1,80 +1,79 @@
-# MEVO Route Planner
+# MEVO Radar
 
 ## What is this
-A PWA web app for building multimodal routes using the Rowermevo city bike-sharing system (Trójmiasto — Gdańsk/Gdynia/Sopot). Google Maps doesn't integrate MEVO, so we build our own route planner.
+A web app for the Rowermevo city bike-sharing system (Trójmiasto — Gdańsk/Gdynia/Sopot) with two jobs on one map:
+1. **Route planner** — origin → destination as walk → MEVO station (bike) → station → walk, with a Google Maps link. Google Maps doesn't integrate MEVO.
+2. **Bike finder** — find a specific bike by the number on its frame (e.g. `e4937`, `0366`), at a station or parked outside one, and keep tracking it.
 
-## User scenario
-1. User enters origin → destination
-2. App finds optimal MEVO stations based on availability
-3. Builds route: walk → station A (bike) → station B → walk
-4. "Otwórz w Google Maps" button opens the route via waypoints
+UI languages: Polish (default for Polish browsers) and English. Unofficial — the UI says it is not affiliated with MEVO.
 
 ## Architecture
-- `fetch-data.js` — Node script, fetches GBFS API and saves to `mevo-data.json`
-- `index.html` — SPA, mobile-first, reads `mevo-data.json` locally
-- Run: `node fetch-data.js && npx serve .`
+One Cloudflare Worker serves both the built React app (static assets) and the `/api/*` routes — one domain, one deploy, no CORS.
+
+```
+src/            React app (Vite + TypeScript)
+  App.tsx         tabs, route/tracking state, map wiring
+  api.ts          TanStack Query hooks for /api/*, bike-number lookup
+  i18n.tsx        PL/EN dictionaries
+  lib/planner.ts  station selection + trip planning
+  lib/routing.ts  OSRM (FOSSGIS) routing and walking-distance table
+  lib/geocode.ts  Nominatim search
+  components/     MapView (MapLibre), RoutePanel, BikePanel, PlaceInput, BikeChips
+worker/         Cloudflare Worker
+  index.ts        routes, edge cache, cron handler
+  mevo.ts         upstream MEVO sources
+shared/types.ts API response types used by both sides
+```
+
+- Dev: `npm run dev` — Vite with `@cloudflare/vite-plugin` runs the app and the Worker together (http://localhost:5173).
+- Typecheck: `npm run typecheck`. Build: `npm run build`. Deploy: `npm run deploy` (or push to `main`, see `.github/workflows/deploy.yml`).
+- Trigger the cron locally: `curl -X POST "http://localhost:5173/cdn-cgi/local/explorer/api/local/scheduled?worker=mevo-radar" -H 'content-type: application/json' -d '{"cron":"*/2 * * * *"}'`
+
+## API (Worker)
+| Route | Source | Freshness |
+|---|---|---|
+| `GET /api/stations` | GBFS `station_information` + `station_status` | edge cache 20 s |
+| `GET /api/bikes` | GraphQL `freeFloatingVehicles` — bikes outside stations, with numbers | edge cache 15 s |
+| `GET /api/docked` | GraphQL `dockGroupVehicles` per station — bikes at stations, with numbers | KV, refreshed by cron every 2 min |
 
 ## Data sources
-- **MEVO GBFS API**: `https://gbfs.urbansharing.com/rowermevo.pl/`
-  - Requires header: `Client-Identifier: mevo-route-planner`
-  - `station_information.json` — coordinates, names, addresses, capacity
-  - `station_status.json` — real-time: num_bikes, num_docks, vehicle_types_available
-  - vehicle_type_id: `bike` (regular) and `ebike` (electric)
-  - CORS blocks browser requests — so we fetch via Node
-- **Nominatim** (OSM): address geocoding, free, CORS ok
-- **OSRM**: routing (foot/bike), free, CORS ok
-- **Google Maps URLs**: `https://www.google.com/maps/dir/?api=1&origin=...&destination=...&waypoints=...|...&travelmode=bicycling`
+- **MEVO GBFS** `https://gbfs.urbansharing.com/rowermevo.pl/` — official open data, CORS open. Send `Client-Identifier: mevo-radar`. Station counts only; its `bike_id`s are anonymised and rotate after every trip.
+- **Urban Sharing GraphQL** `https://core.urbansharing.com/public/api/v1/graphql` — what rowermevo.pl itself uses. Unofficial; needs headers `systemId: inurba-gdansk` and `Origin: https://rowermevo.pl` (CORS only allows rowermevo.pl, which is why it goes through the Worker).
+  - `freeFloatingVehicles(systemId)` — bikes outside stations with `number`, `batteryCharge`, `currentRange`, `category`, `available`, `location`.
+  - `dockGroupVehicles(dockGroupId)` — bikes at one station, no auth. No "all stations" variant, so the Worker batches ~40 aliased fields per query (~20 queries for a full scan, ~20 s). Station ids equal GBFS `station_id`.
+  - `vehicle(...)`, `trips` need a logged-in user token — not usable. Introspection is disabled.
+- **Nominatim** (OSM) — geocoding, bounded to the Tricity viewbox.
+- **OSRM by FOSSGIS** `https://routing.openstreetmap.de/routed-foot|routed-bike/...` — real foot and bike profiles. The OSRM demo server (`router.project-osrm.org`) ignores the profile and always routes by car — don't use it. FOSSGIS rate-limits bursts (HTTP 429), so use the `table` service for many distances at once.
+- **Map tiles** — OpenFreeMap vector styles (`positron` light, `dark` dark), no key.
 
 ## Station selection logic
-- Departure station: nearest to origin with ≥1 bike of the required type (electric/classic/any)
-- Arrival station: nearest to destination with ≥1 free dock
-- Maximum search radius: 3 km
-- Distance: haversine
+- Pickup: of the 5 nearest active stations within 3 km that have ≥1 bike of the wanted type (any/electric/classic), the one with the shortest real walking distance (one OSRM table request).
+- If no station has a bike, the nearest free-floating bike is used as the pickup.
+- A free-floating bike closer than the pickup station is suggested.
+- Drop-off: same rule near the destination, for stations with ≥1 free dock.
+- Bike leg duration: at least distance / 15 km/h (the bike profile is optimistic for city riding).
 
 ## Warning thresholds
 - 0 bikes/docks → station excluded
-- 1-2 → yellow warning + suggestion to reserve (for departure) or alternative station (for arrival)
+- 1–2 → yellow warning (reserve in the MEVO app; alternative drop-off station with ≥3 docks)
 - 3+ → ok
 
-## Tech stack
-- Leaflet + OpenStreetMap (map)
-- Nominatim (geocoding)
-- OSRM (routing)
-- Vanilla JS (no frameworks)
-- UI language: Polish
+## Deploy setup (one-time)
+1. `npx wrangler kv namespace create MEVO_KV` and put the id into `wrangler.jsonc`.
+2. Repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` for the GitHub Action.
+- Free-plan limits that shape the design: 1000 KV writes/day (hence cron every 2 min, 720/day), 50 subrequests per invocation (a full station scan uses ~21).
 
-## mevo-data.json format
-```json
-{
-  "updated": "2025-01-01T12:00:00Z",
-  "count": 250,
-  "stations": [
-    {
-      "id": "3927",
-      "name": "GDA099",
-      "address": "aleja Jana Pawła II 48",
-      "lat": 54.4025,
-      "lon": 18.6108,
-      "capacity": 10,
-      "bikes": 2,    // regular
-      "ebikes": 3,   // electric
-      "docks": 5,    // free docks
-      "active": true
-    }
-  ]
-}
-```
+## Gotchas
+- MapLibre 6 finds its web worker relative to its own bundle at runtime. `MapView.tsx` bundles it via `?worker&url` + `setWorkerUrl`, and `vite.config.ts` excludes `maplibre-gl` from dependency prebundling so the main thread and the worker share the same module code. Without both, the map stays blank.
 
-## TODO (v2)
+## TODO
 - [ ] PWA manifest + service worker
 - [ ] Choose from multiple station options (top 3)
 - [ ] Trip cost calculation based on MEVO tariffs
-- [ ] Auto-refresh data via Cloudflare Worker proxy
 - [ ] ZTM integration (bus/tram + MEVO)
-- [ ] Dark theme
-- [ ] Deep link to MEVO app: `rowermevo://stations/{id}`
+- [ ] Notify when a tracked bike becomes available
 
 ## Limitations
-- Google Maps URL supports only one travelmode — we use `bicycling` for the entire route
-- MEVO data is static (snapshot at the time fetch-data.js runs)
-- OSRM public instance can be slow — for production, a self-hosted or paid instance is needed
+- Google Maps URLs support one travel mode — `bicycling` is used for the whole route.
+- A bike that is on a trip is not visible anywhere until it is parked again.
+- The GraphQL API is unofficial and may change or close without notice.

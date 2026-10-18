@@ -1,0 +1,80 @@
+// Cloudflare Worker: serves the built web app (static assets) and the /api/* routes.
+//
+//   GET /api/stations  stations with live counts (GBFS), cached 20 s
+//   GET /api/bikes     bikes parked outside stations, with frame numbers, cached 15 s
+//   GET /api/docked    bikes standing at stations, with frame numbers — refreshed by the
+//                      cron trigger every 2 minutes and kept in KV (a full scan is ~20 requests)
+
+import type { BikesResponse, StationsResponse } from "../shared/types";
+import { fetchDockedBikes, fetchFreeBikes, fetchStations } from "./mevo";
+
+interface Env {
+  MEVO_KV: KVNamespace;
+  ASSETS: Fetcher;
+}
+
+const DOCKED_KEY = "docked-bikes";
+const DOCKED_STALE_AFTER = 150; // s — the cron refreshes every 120 s; rescan on demand if it lagged
+let scanStartedAt = 0; // per isolate, keeps concurrent requests from starting parallel scans
+const now = () => Math.floor(Date.now() / 1000);
+
+function json(body: unknown, maxAge: number, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", "cache-control": `public, max-age=${maxAge}` },
+  });
+}
+
+// Edge-cache an upstream call so many visitors share one upstream request.
+async function cached(request: Request, ctx: ExecutionContext, maxAge: number, load: () => Promise<unknown>) {
+  const cache = caches.default;
+  const key = new Request(new URL(request.url).toString(), { method: "GET" });
+  const hit = await cache.match(key);
+  if (hit) return hit;
+  const res = json(await load(), maxAge);
+  ctx.waitUntil(cache.put(key, res.clone()));
+  return res;
+}
+
+async function scanDocked(env: Env): Promise<BikesResponse> {
+  scanStartedAt = now();
+  const body: BikesResponse = { updated: now(), bikes: await fetchDockedBikes() };
+  await env.MEVO_KV.put(DOCKED_KEY, JSON.stringify(body), { metadata: { updated: body.updated } });
+  return body;
+}
+
+async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const { pathname } = new URL(request.url);
+  switch (pathname) {
+    case "/api/stations":
+      return cached(request, ctx, 20, async (): Promise<StationsResponse> => fetchStations());
+    case "/api/bikes":
+      return cached(request, ctx, 15, async (): Promise<BikesResponse> => ({ updated: now(), bikes: await fetchFreeBikes() }));
+    case "/api/docked": {
+      const { value: stored, metadata } = await env.MEVO_KV.getWithMetadata<{ updated: number }>(DOCKED_KEY);
+      // Before the first cron run (fresh deploy) scan on demand and wait for it.
+      if (!stored) return json(await scanDocked(env), 30);
+      // Serve what we have; if the cron lagged (or doesn't run, as in local dev), refresh in the background.
+      const updated = metadata?.updated ?? 0;
+      if (now() - updated > DOCKED_STALE_AFTER && now() - scanStartedAt > 60) ctx.waitUntil(scanDocked(env).catch(() => undefined));
+      return new Response(stored, { headers: { "content-type": "application/json", "cache-control": "public, max-age=30" } });
+    }
+    default:
+      return json({ error: "Not found" }, 0, 404);
+  }
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    if (!new URL(request.url).pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    try {
+      return await api(request, env, ctx);
+    } catch (e) {
+      return json({ error: e instanceof Error ? e.message : String(e) }, 0, 502);
+    }
+  },
+
+  async scheduled(_event, env, ctx) {
+    ctx.waitUntil(scanDocked(env).then(() => undefined));
+  },
+} satisfies ExportedHandler<Env>;
