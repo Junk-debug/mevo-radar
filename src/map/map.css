@@ -37,12 +37,7 @@
 }
 @keyframes ping { from { transform: scale(0.2); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
 
-.locate-btn {
-  position: absolute; z-index: 1;
-  top: calc(80px + env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px));
-  width: 29px; height: 29px; display: grid; place-items: center; padding: 0;
-  border: 0; border-radius: 4px; background: #fff; color: #333; box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1);
-}
+.locate-btn { position: absolute; z-index: 1; top: calc(80px + env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); }
 .locate-btn.on { color: var(--me); }
 .locate-btn.busy svg { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

@@ -4,17 +4,8 @@
   border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2);
   font-size: 16px; text-transform: lowercase;
 }
-.bike-search .primary { width: auto; padding-inline: 20px; }
 
-.nearest-btn {
-  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
-  padding: 11px 14px; border-radius: var(--r-md); border: 1px solid var(--line);
-  background: var(--surface); color: var(--ink); font-weight: 600;
-}
-.nearest-btn svg { color: var(--me); }
-.nearest-btn:hover:not(:disabled) { border-color: var(--ink); }
-.nearest-btn:disabled { cursor: progress; color: var(--muted); }
-
+.nearest svg { color: var(--me); }
 .nearby { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .nearby button {
   width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;

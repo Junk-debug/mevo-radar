@@ -5,6 +5,7 @@ import { formatDistance, formatDuration } from "../../lib/geo";
 import { bikesAt, googleMapsUrl, LOW_COUNT, type BikePreference, type TripPlan } from "../../lib/planner";
 import { useTrackBike } from "../bike/actions";
 import { BikeChips } from "../bike/BikeChips";
+import { Button, Card, Notice } from "../../ui";
 
 interface Props {
   plan: TripPlan;
@@ -87,13 +88,13 @@ export function RouteResult({ plan, pref }: Props) {
       </div>
       <LegBar plan={plan} />
 
-      <div className="card pickup">
+      <Card className="pickup">
         {pickup.kind === "station" ? (
           <>
             <strong className="pickup-title">{t("pickupAt", { name: pickup.station.name })}</strong>
             <span className="muted small">{t("pickupMeta", { min: walkToBike, n: pickupCount ?? 0 })}</span>
             {pickup.bikes.length > 0 && <BikeChips bikes={pickup.bikes} onPick={onBike} />}
-            {pickupCount !== null && pickupCount <= LOW_COUNT && <p className="notice notice-warn">{t("lowBikes", { n: pickupCount })}</p>}
+            {pickupCount !== null && pickupCount <= LOW_COUNT && <Notice tone="warn">{t("lowBikes", { n: pickupCount })}</Notice>}
           </>
         ) : (
           <>
@@ -111,9 +112,9 @@ export function RouteResult({ plan, pref }: Props) {
                   : { kind: "app" }
             }
           />
-          <a className="btn ghost" href={googleMapsUrl(plan)} target="_blank" rel="noopener">{t("openInGoogle")}</a>
+          <Button variant="ghost" href={googleMapsUrl(plan)} external>{t("openInGoogle")}</Button>
         </div>
-      </div>
+      </Card>
 
       <div className="dropoff">
         <span>
@@ -121,18 +122,18 @@ export function RouteResult({ plan, pref }: Props) {
           <span className="muted small"> · {t("dropoffMeta", { n: dropoff.docks })}</span>
         </span>
         {dropoff.docks <= LOW_COUNT && (
-          <p className="notice notice-warn">
+          <Notice tone="warn">
             {plan.dropoffAlternative
               ? t("lowDocks", { n: dropoff.docks, alt: plan.dropoffAlternative.name, docks: plan.dropoffAlternative.docks })
               : t("lowDocksNoAlt", { n: dropoff.docks })}
-          </p>
+          </Notice>
         )}
       </div>
 
       {plan.closerFreeBike && (
-        <button type="button" className="notice notice-tip" onClick={() => onBike(plan.closerFreeBike!.bike.number)}>
+        <Notice tone="tip" onClick={() => onBike(plan.closerFreeBike!.bike.number)}>
           {t("closerFreeBike", { number: plan.closerFreeBike.bike.number, dist: formatDistance(plan.closerFreeBike.distance) })}
-        </button>
+        </Notice>
       )}
 
       <details className="details">

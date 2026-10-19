@@ -17,24 +17,24 @@ One Cloudflare Worker serves both the built React app (static assets) and the `/
 
 ```
 src/
-  main.tsx          entry: providers + global styles
+  main.tsx          entry: providers, global styles, startup (geolocation, bike #hash links)
   api.ts            server data (TanStack Query) + derived indexes: useStationsData, useAllBikes, useSystemStats
   store/            client state (Zustand): ui (tab, sheet, camera), location (geolocation), bike (tracked
                     bike — persisted, selected station, nearby), route (from/to/pref/plan/map picking)
-  app/              App (layout only), AppEffects (app-wide effects: geolocation, #hash, auto-planning),
-                    Sheet, Credit, BrandMark, useTheme
+  app/              App (layout only), Sheet, Credit, BrandMark, useTheme
+  ui/               generic components: Button, IconButton, Segmented, Notice, Pill, Card, Icon (all icons) + ui.css
   map/              MapView (pure MapLibre component), MapContainer (connects it to stores/data),
                     useMapMarkers, layers.ts, LocateButton, PickToast
   features/
-    route/          RoutePanel, RouteResult, PlaceInput, useAutoPlan, useRouteStart
-    bike/           BikePanel, TrackedBikeCard, StationCard, NearbyList, BikeChips,
-                    actions.ts (useTrackBike, useShowStation, useFindNearest, useTrackedBike…)
+    route/          RoutePanel (runs useAutoPlan), RouteResult, PlaceInput, useRouteStart
+    bike/           BikePanel (camera follows the tracked bike), TrackedBikeCard, StationCard, NearbyList,
+                    BikeChips, actions.ts (useTrackBike, useShowStation, useFindNearest, useTrackedBike), deepLink.ts
     live/           LivePanel
   components/       shared UI: OpenInMevo
   i18n/             index.tsx (provider, plural formatting), pl.ts, en.ts
   lib/              no React state: planner, routing (OSRM), geocode (Nominatim), nearest, mevoApp,
                     recentPlaces, bikeNumber, storage, viewport, geo, useSheetDrag
-  styles/           tokens.css (theme), base.css, ui.css
+  styles/           tokens.css (theme), base.css
 worker/
   index.ts          routes, edge cache, cron handler
   mevo.ts           upstream MEVO sources
@@ -46,6 +46,8 @@ Conventions:
 - Server data lives only in TanStack Query; client state only in the Zustand stores — never copy one into the other.
 - Components read stores and data themselves; actions that need both are hooks in `features/*/actions.ts`.
 - `store/` and `lib/` never import `api.ts` or features.
+- Effects live with the feature that needs them; one-off startup goes in `main.tsx`, not a global effects component.
+- Use the `ui/` components instead of raw button/notice classes or inline SVGs; add a variant or an icon there.
 - One component per file, CSS next to the feature that owns it, comments only for the non-obvious "why".
 
 - Dev: `npm run dev` — Vite with `@cloudflare/vite-plugin` runs the app and the Worker together (http://localhost:5173).

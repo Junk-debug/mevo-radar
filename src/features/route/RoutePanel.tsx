@@ -4,8 +4,10 @@ import { isPhone } from "../../lib/viewport";
 import { useLocationStore } from "../../store/location";
 import { useRouteStore, type Field } from "../../store/route";
 import { useUi } from "../../store/ui";
+import { IconButton, Notice, Segmented } from "../../ui";
 import { PlaceInput } from "./PlaceInput";
 import { RouteResult } from "./RouteResult";
+import { useAutoPlan } from "./useAutoPlan";
 import { useRouteStart } from "./useRouteStart";
 import "./route.css";
 
@@ -30,6 +32,7 @@ const expandOnPhone = () => isPhone() && useUi.getState().setSheet("full");
 
 export function RoutePanel() {
   const { t } = useI18n();
+  useAutoPlan();
   const start = useRouteStart();
   const { to, pref, plan, status, choose, setPref, swap } = useRouteStore();
 
@@ -53,23 +56,13 @@ export function RoutePanel() {
           onPickOnMap={() => pickOnMap("to")}
           onFocus={expandOnPhone}
         />
-        <button type="button" className="swap" title={t("swap")} aria-label={t("swap")} onClick={() => swap(start)} disabled={!start && !to}>
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M7 4v14m0 0-3-3m3 3 3-3M17 20V6m0 0-3 3m3-3 3 3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        <IconButton icon="swap" variant="round" className="swap" label={t("swap")} onClick={() => swap(start)} disabled={!start && !to} />
       </div>
 
-      <div className="segmented" role="radiogroup" aria-label={t("type")}>
-        {PREFS.map((p) => (
-          <button key={p.value} type="button" role="radio" aria-checked={pref === p.value} className={pref === p.value ? "on" : ""} onClick={() => setPref(p.value)}>
-            {t(p.label)}
-          </button>
-        ))}
-      </div>
+      <Segmented label={t("type")} value={pref} onChange={setPref} options={PREFS.map((p) => ({ value: p.value, label: t(p.label) }))} />
 
       {status === "loading" && <p className="route-loading" role="status">{t("searching")}</p>}
-      {status in ERRORS && <p className="notice notice-error" role="alert">{t(ERRORS[status as keyof typeof ERRORS])}</p>}
+      {status in ERRORS && <Notice tone="error">{t(ERRORS[status as keyof typeof ERRORS])}</Notice>}
       {plan && status === "ready" && <RouteResult plan={plan} pref={pref} />}
     </div>
   );

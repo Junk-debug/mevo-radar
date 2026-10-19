@@ -9,13 +9,10 @@ const bikeStore = useBikeStore.getState;
 const ui = useUi.getState;
 
 export function useTrackBike() {
-  const all = useAllBikes();
+  const { resolve } = useAllBikes();
   return (query: string) => {
-    const key = all.resolve(query);
-    bikeStore().setTracked(key);
+    bikeStore().setTracked(resolve(query));
     ui().showTab("bike");
-    const bike = all.bikes.get(key);
-    if (bike) ui().focusOn([bike.lat, bike.lon]);
   };
 }
 
@@ -43,18 +40,12 @@ export function useFindNearest() {
   };
 }
 
-/** The followed bike with its live data, if it is parked somewhere right now. */
+/**
+ * The followed bike with its live data, if it is parked somewhere right now. A link may carry a
+ * loose number ("#4937"), so it is resolved against the data on every read.
+ */
 export function useTrackedBike() {
-  const { bikes } = useAllBikes();
+  const { bikes, resolve } = useAllBikes();
   const number = useBikeStore((s) => s.tracked);
-  const lastSeen = useBikeStore((s) => s.lastSeen);
-  return { number, bike: number ? (bikes.get(number) ?? null) : null, lastSeen };
-}
-
-/** Opening the "Rower" tab brings the tracked bike into view. */
-export function useEnterBikeTab() {
-  const { bike } = useTrackedBike();
-  return () => {
-    if (bike && !bikeStore().nearby.places) ui().focusOn([bike.lat, bike.lon]);
-  };
+  return { number, bike: number ? (bikes.get(number) ?? bikes.get(resolve(number)) ?? null) : null };
 }

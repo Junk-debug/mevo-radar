@@ -1,0 +1,51 @@
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid transparent; border-radius: var(--r-sm); padding: 8px 12px;
+  font-size: 13.5px; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.btn:disabled { opacity: 0.6; cursor: progress; }
+.btn--block { display: flex; width: 100%; }
+.btn--primary {
+  border-radius: var(--r-md); padding: 12px 18px; font-size: 15px; font-weight: 700;
+  background: var(--accent); color: var(--accent-ink);
+}
+.btn--primary:hover:not(:disabled) { filter: brightness(1.06); }
+.btn--solid { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.btn--ghost { background: none; color: var(--ink); border-color: var(--line); }
+.btn--accent { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn--outline {
+  padding: 11px 14px; border-radius: var(--r-md); border-color: var(--line);
+  background: var(--surface); color: var(--ink); font-size: 15px;
+}
+.btn--outline:hover:not(:disabled), .btn--ghost:hover { border-color: var(--ink); }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.icon-btn { display: grid; place-items: center; flex: none; padding: 0; border: 0; cursor: pointer; }
+.icon-btn--plain { width: 32px; height: 32px; border-radius: var(--r-sm); background: none; color: var(--muted); }
+.icon-btn--plain:hover { color: var(--ink); background: var(--surface-2); }
+.icon-btn--round { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.icon-btn--round:disabled { opacity: 0.4; cursor: default; }
+/* Matches MapLibre's own controls, which stay light in both themes. */
+.icon-btn--map { width: 29px; height: 29px; border-radius: 4px; background: #fff; color: #333; box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1); }
+
+.segmented { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; }
+.segmented button { border: 0; background: none; color: var(--muted); cursor: pointer; }
+.segmented--md { padding: 3px; gap: 3px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line); }
+.segmented--md button { padding: 7px 4px; border-radius: 9px; font-weight: 500; font-size: 14px; }
+.segmented--md button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgb(13 27 42 / 0.12); font-weight: 600; }
+.segmented--sm { display: inline-grid; padding: 2px; border: 1px solid var(--line); border-radius: 999px; }
+.segmented--sm button { padding: 3px 8px; border-radius: 999px; font: 600 11px/1.2 var(--font-mono); }
+.segmented--sm button.on { background: var(--ink); color: var(--surface); }
+
+.notice { margin: 0; width: 100%; padding: 10px 12px; border: 0; border-radius: var(--r-sm); font-size: 13.5px; text-align: left; }
+.notice--error { background: color-mix(in srgb, var(--gone) 12%, transparent); color: var(--gone); }
+.notice--warn { background: color-mix(in srgb, var(--low) 16%, transparent); color: var(--ink); }
+.notice--tip { background: color-mix(in srgb, var(--ok) 13%, transparent); color: var(--ink); cursor: pointer; }
+
+.pill { justify-self: start; display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill--ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, transparent); }
+.pill--warn { color: var(--low); background: color-mix(in srgb, var(--low) 15%, transparent); }
+.pill--gone { color: var(--gone); background: color-mix(in srgb, var(--gone) 12%, transparent); }
+
+.card { display: grid; gap: 10px; padding: 14px; border-radius: var(--r-md); background: var(--surface-2); }

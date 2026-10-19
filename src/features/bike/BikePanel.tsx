@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "../../i18n";
 import { useBikeStore } from "../../store/bike";
+import { useUi } from "../../store/ui";
+import { Button, Notice } from "../../ui";
 import { useFindNearest, useTrackBike, useTrackedBike } from "./actions";
 import { NearbyList } from "./NearbyList";
 import { StationCard } from "./StationCard";
@@ -17,6 +19,15 @@ export function BikePanel() {
   const [query, setQuery] = useState(number ?? "");
   useEffect(() => setQuery(bike?.number ?? number ?? ""), [number, bike?.number]);
   const showingNearby = !!nearby.places?.length;
+
+  // When the panel is about the tracked bike, the map shows it too: on opening the tab, on picking
+  // another bike, and when a link's bike first appears in the data. A station or a nearby search
+  // owns the camera instead.
+  const aboutBike = !showingNearby && !nearby.loading && !stationId;
+  const shownNumber = aboutBike ? (bike?.number ?? null) : null;
+  useEffect(() => {
+    if (bike && shownNumber) useUi.getState().focusOn([bike.lat, bike.lon]);
+  }, [shownNumber]);
 
   return (
     <div className="panel-body">
@@ -38,18 +49,14 @@ export function BikePanel() {
           spellCheck={false}
           autoCapitalize="none"
         />
-        <button className="primary" type="submit">{t("find")}</button>
+        <Button variant="primary" type="submit">{t("find")}</Button>
       </form>
 
-      <button type="button" className="nearest-btn" onClick={findNearest} disabled={nearby.loading}>
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <circle cx="12" cy="12" r="3.5" fill="currentColor" />
-          <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
-        </svg>
+      <Button variant="outline" block icon="target" className="nearest" onClick={findNearest} disabled={nearby.loading}>
         {nearby.loading ? t("findingNearest") : t("nearestBike")}
-      </button>
+      </Button>
 
-      {nearby.error && <p className="notice notice-warn">{t(nearby.error === "location" ? "nearestNeedsLocation" : "nearestNone")}</p>}
+      {nearby.error && <Notice tone="warn">{t(nearby.error === "location" ? "nearestNeedsLocation" : "nearestNone")}</Notice>}
       {showingNearby && <NearbyList />}
       {!number && !stationId && !showingNearby && <p className="hint">{t("bikeHint")}</p>}
       {number && !showingNearby && <TrackedBikeCard />}

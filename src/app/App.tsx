@@ -5,7 +5,6 @@ import { LocateButton } from "../map/LocateButton";
 import { MapContainer } from "../map/MapContainer";
 import { PickToast } from "../map/PickToast";
 import { useUi } from "../store/ui";
-import { AppEffects } from "./AppEffects";
 import { Sheet } from "./Sheet";
 
 export function App() {
@@ -13,7 +12,6 @@ export function App() {
 
   return (
     <div className="app">
-      <AppEffects />
       <MapContainer />
       <LocateButton />
       <PickToast />

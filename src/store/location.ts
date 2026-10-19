@@ -7,8 +7,8 @@ interface LocationState {
   pos: LatLon | null;
   status: LocationStatus;
   hint: boolean;
-  /** Start tracking silently if access was granted earlier. Returns a cleanup function. */
-  init: () => () => void;
+  /** Start tracking silently if access was granted earlier. Call once at startup. */
+  init: () => void;
   /** The current position, asking for it if needed; shows a short hint on failure. */
   locate: () => Promise<LatLon | null>;
 }
@@ -53,12 +53,7 @@ export const useLocationStore = create<LocationState>()((set, get) => {
           } else if (p.state === "denied") set({ status: "denied" });
         })
         .catch(() => {});
-      const onVisibility = () => (document.visibilityState === "visible" ? optedIn && startWatch() : stopWatch());
-      document.addEventListener("visibilitychange", onVisibility);
-      return () => {
-        document.removeEventListener("visibilitychange", onVisibility);
-        stopWatch();
-      };
+      document.addEventListener("visibilitychange", () => (document.visibilityState === "visible" ? optedIn && startWatch() : stopWatch()));
     },
 
     locate: () => {

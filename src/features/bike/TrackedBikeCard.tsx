@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Bike, Station } from "../../../shared/types";
 import { useAllBikes, useStationsData } from "../../api";
 import { OpenInMevo } from "../../components/OpenInMevo";
@@ -7,6 +7,7 @@ import { formatDistance, haversine } from "../../lib/geo";
 import { stationPos, walkingDirectionsUrl } from "../../lib/planner";
 import { useBikeStore } from "../../store/bike";
 import { useTrackedBike } from "./actions";
+import { Button, Card, Pill } from "../../ui";
 
 function nearestStation(stations: Station[], b: Bike) {
   let best: { station: Station; distance: number } | null = null;
@@ -20,22 +21,26 @@ function nearestStation(stations: Station[], b: Bike) {
 export function TrackedBikeCard() {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
-  const { number, bike, lastSeen } = useTrackedBike();
+  const { number, bike } = useTrackedBike();
+  // Remember where the bike stood, so a bike that just left on a trip reads "riding", not "not found".
+  const lastSeen = useRef<Bike | null>(null);
+  if (bike) lastSeen.current = bike;
+  else if (lastSeen.current && lastSeen.current.number.toLowerCase() !== number) lastSeen.current = null;
   const { stations, byId } = useStationsData();
   const { dockedLoaded } = useAllBikes();
   const onUntrack = () => useBikeStore.getState().setTracked(null);
   if (!number) return null;
   const station = bike?.stationId ? byId.get(bike.stationId) : null;
   const near = bike && !station ? nearestStation(stations, bike) : null;
-  const where = bike ?? lastSeen;
+  const where = bike ?? lastSeen.current;
 
   const status = bike
     ? bike.available
-      ? { text: t(station ? "statusAtStation" : "statusFree"), tone: "ok" }
-      : { text: t("statusUnavailable"), tone: "warn" }
+      ? { text: t(station ? "statusAtStation" : "statusFree"), tone: "ok" as const }
+      : { text: t("statusUnavailable"), tone: "warn" as const }
     : !dockedLoaded
-      ? { text: t("statusLoading"), tone: "warn" }
-      : { text: t(lastSeen ? "statusRiding" : "statusNotFound"), tone: "gone" };
+      ? { text: t("statusLoading"), tone: "warn" as const }
+      : { text: t(lastSeen.current ? "statusRiding" : "statusNotFound"), tone: "gone" as const };
 
   const copy = async () => {
     try {
@@ -48,9 +53,9 @@ export function TrackedBikeCard() {
   };
 
   return (
-    <section className="card tracked" aria-live="polite">
-      <span className={`pill pill-${status.tone}`}>{status.text}</span>
-      <h2 className="bike-number">{bike?.number ?? lastSeen?.number ?? number}</h2>
+    <Card className="tracked" live>
+      <Pill tone={status.tone}>{status.text}</Pill>
+      <h2 className="bike-number">{where?.number ?? number}</h2>
       {bike ? (
         <dl className="facts">
           <dt>{t("type")}</dt>
@@ -94,13 +99,13 @@ export function TrackedBikeCard() {
           <OpenInMevo target={bike.appId ? { kind: "vehicle", id: bike.appId } : bike.stationId ? { kind: "station", id: bike.stationId } : { kind: "app" }} />
         )}
         {where && (
-          <a className="btn" href={walkingDirectionsUrl([where.lat, where.lon])} target="_blank" rel="noopener">
+          <Button href={walkingDirectionsUrl([where.lat, where.lon])} external>
             {t("walkThere")}
-          </a>
+          </Button>
         )}
-        <button type="button" className="btn ghost" onClick={copy}>{copied ? t("copied") : t("copyNumber")}</button>
-        <button type="button" className="btn ghost" onClick={onUntrack}>{t("stopTracking")}</button>
+        <Button variant="ghost" onClick={copy}>{copied ? t("copied") : t("copyNumber")}</Button>
+        <Button variant="ghost" onClick={onUntrack}>{t("stopTracking")}</Button>
       </div>
-    </section>
+    </Card>
   );
 }

@@ -1,16 +1,20 @@
 import { useRef, type ReactNode } from "react";
 import { useAllBikes, useStationsData } from "../api";
-import { useEnterBikeTab } from "../features/bike/actions";
 import { useI18n, type Lang } from "../i18n";
 import { useSheetDrag } from "../lib/useSheetDrag";
 import { isPhone } from "../lib/viewport";
 import { useUi, type Tab } from "../store/ui";
+import { Icon, IconButton, Notice, Segmented } from "../ui";
 import { BrandMark } from "./BrandMark";
 import { Credit } from "./Credit";
 import "./sheet.css";
 
 const TABS: Tab[] = ["route", "bike", "live"];
 const TAB_LABEL = { route: "tabRoute", bike: "tabBike", live: "tabLive" } as const;
+const LANGS: { value: Lang; label: string }[] = [
+  { value: "pl", label: "PL" },
+  { value: "en", label: "EN" },
+];
 
 function useStatusLine() {
   const { t } = useI18n();
@@ -25,13 +29,8 @@ function useStatusLine() {
 
 export function Sheet({ children }: { children: ReactNode }) {
   const { t, lang, setLang } = useI18n();
-  const { tab, sheet: state, setSheet: onState, showTab } = useUi();
+  const { tab, sheet: state, setSheet: onState, showTab: onTab } = useUi();
   const { online, status } = useStatusLine();
-  const enterBikeTab = useEnterBikeTab();
-  const onTab = (next: Tab) => {
-    showTab(next);
-    if (next === "bike") enterBikeTab();
-  };
   const ref = useRef<HTMLElement>(null);
   const drag = useSheetDrag(ref, state, onState);
   const open = state !== "peek";
@@ -41,9 +40,7 @@ export function Sheet({ children }: { children: ReactNode }) {
       <button type="button" className="sheet-open" hidden={open} onClick={() => onState("half")} aria-label={t("showPanel")}>
         <BrandMark />
         <span>{t("appName")}</span>
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-          <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <Icon name="chevron-right" size={16} />
       </button>
 
       <aside
@@ -70,24 +67,13 @@ export function Sheet({ children }: { children: ReactNode }) {
               </div>
             </div>
             <div className="head-tools">
-              <div className="lang" role="group" aria-label={t("language")}>
-                {(["pl", "en"] as Lang[]).map((l) => (
-                  <button key={l} type="button" className={lang === l ? "on" : ""} aria-pressed={lang === l} onClick={() => setLang(l)}>
-                    {l.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="icon-btn collapse-btn"
+              <Segmented<Lang> size="sm" label={t("language")} value={lang} onChange={setLang} options={LANGS} />
+              <IconButton
+                icon="chevron-left"
+                className="collapse-btn"
+                label={open ? t("hidePanel") : t("showPanel")}
                 onClick={() => onState(open ? "peek" : "half")}
-                aria-label={open ? t("hidePanel") : t("showPanel")}
-                title={open ? t("hidePanel") : t("showPanel")}
-              >
-                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                  <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
+              />
             </div>
           </header>
 
@@ -101,7 +87,7 @@ export function Sheet({ children }: { children: ReactNode }) {
           </nav>
         </div>
 
-        {!online && <p className="notice notice-error">{t("offline")}</p>}
+        {!online && <Notice tone="error">{t("offline")}</Notice>}
         {children}
         <Credit />
       </aside>

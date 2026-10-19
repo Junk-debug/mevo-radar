@@ -3,6 +3,7 @@ import { useI18n } from "../../i18n";
 import { searchPlaces } from "../../lib/geocode";
 import { recentPlaces } from "../../lib/recentPlaces";
 import type { Field, PlaceValue } from "../../store/route";
+import { Icon, type IconName } from "../../ui";
 
 interface Props {
   field: Field;
@@ -25,12 +26,7 @@ interface Option {
 const MIN_QUERY = 3;
 const DEBOUNCE_MS = 350;
 
-const ICONS = {
-  me: <><circle cx="12" cy="12" r="3.5" fill="currentColor" /><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.8" /></>,
-  map: <path d="M12 21s-6-5.6-6-11a6 6 0 1 1 12 0c0 5.4-6 11-6 11Zm0-8.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" fill="currentColor" />,
-  recent: <path d="M12 7v5l3 2M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />,
-  place: <path d="M12 21s-6-5.6-6-11a6 6 0 1 1 12 0c0 5.4-6 11-6 11Z" fill="none" stroke="currentColor" strokeWidth="1.8" />,
-};
+const ICONS: Record<Option["icon"], IconName> = { me: "target", map: "pin", recent: "clock", place: "pin-outline" };
 
 export function PlaceInput({ field, value, placeholder, onChoose, onPickOnMap, onUseMyLocation, onFocus }: Props) {
   const { t, lang } = useI18n();
@@ -150,7 +146,7 @@ export function PlaceInput({ field, value, placeholder, onChoose, onPickOnMap, o
                   o.run();
                 }}
               >
-                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">{ICONS[o.icon]}</svg>
+                <Icon name={ICONS[o.icon]} />
                 <span>
                   <strong>{o.label}</strong>
                   {o.detail && <small>{o.detail}</small>}

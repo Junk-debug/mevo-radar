@@ -14,27 +14,27 @@ export function useAutoPlan() {
   const pref = useRouteStore((s) => s.pref);
   const { stations } = useStationsData();
   const { list } = useAllBikes();
+  const key = start && to && stations.length ? `${placeKey(start)}|${placeKey(to)}|${pref}` : null;
 
   // Read the latest data at planning time without re-planning on every refresh or GPS update.
-  const latest = useRef({ start, stations, list });
-  latest.current = { start, stations, list };
-  const request = useRef(0);
-  const haveStations = stations.length > 0;
+  const latest = useRef({ start, to, stations, list });
+  latest.current = { start, to, stations, list };
 
   useEffect(() => {
-    const { setResult } = useRouteStore.getState();
-    const { start, stations, list } = latest.current;
-    if (!start || !to || !haveStations) return setResult("idle");
-    const id = ++request.current;
-    setResult("loading");
-    planTrip(start.coords, to.coords, pref, stations, list)
+    const { plannedFor, setResult } = useRouteStore.getState();
+    if (key === plannedFor) return;
+    if (!key) return setResult(null, "idle");
+    const { start, to, stations, list } = latest.current;
+    setResult(key, "loading");
+    const isCurrent = () => useRouteStore.getState().plannedFor === key;
+    planTrip(start!.coords, to!.coords, pref, stations, list)
       .then((result) => {
-        if (id !== request.current) return;
-        if (typeof result === "string") return setResult(result);
-        setResult("ready", result);
+        if (!isCurrent()) return;
+        if (typeof result === "string") return setResult(key, result);
+        setResult(key, "ready", result);
         useUi.getState().setSheet("half");
         useUi.getState().fit(result.legs.flatMap((l) => l.line));
       })
-      .catch(() => id === request.current && setResult("failed"));
-  }, [placeKey(start), placeKey(to), pref, haveStations]);
+      .catch(() => isCurrent() && setResult(key, "failed"));
+  }, [key, pref]);
 }

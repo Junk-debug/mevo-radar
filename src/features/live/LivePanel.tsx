@@ -2,9 +2,8 @@ import { useMemo } from "react";
 import { useAllBikes, useStationsData, useSystemStats } from "../../api";
 import { useI18n } from "../../i18n";
 import { useShowStation } from "../bike/actions";
+import { Notice } from "../../ui";
 import "./live.css";
-
-
 
 const BUCKETS = [0, 20, 40, 60, 80] as const; // battery % bucket starts
 
@@ -56,7 +55,7 @@ export function LivePanel() {
 
   return (
     <div className="panel-body live-panel">
-      {statsError && !stats && <p className="notice notice-error">{t("statsUnavailable")}</p>}
+      {statsError && !stats && <Notice tone="error">{t("statsUnavailable")}</Notice>}
 
       {stats && (
         <>
