@@ -16,36 +16,37 @@ UI languages: Polish (default for Polish browsers) and English. Unofficial — t
 One Cloudflare Worker serves both the built React app (static assets) and the `/api/*` routes — one domain, one deploy, no CORS.
 
 ```
-src/
+web/                browser app (Vite + React + TypeScript)
   main.tsx          entry: providers, global styles, startup (geolocation, bike #hash links)
-  api.ts            server data (TanStack Query) + derived indexes: useStationsData, useAllBikes, useSystemStats
-  store/            client state (Zustand): ui (tab, sheet, camera), location (geolocation), bike (tracked
-                    bike — persisted, selected station, nearby), route (from/to/pref/plan/map picking)
-  app/              App (layout only), Sheet, Credit, BrandMark, useTheme
-  ui/               generic components: Button, IconButton, Segmented, Notice, Pill, Card, Icon (all icons) + ui.css
-  map/              MapView (pure MapLibre component), MapContainer (connects it to stores/data),
-                    useMapMarkers, layers.ts, LocateButton, PickToast
-  features/
+  App.tsx           layout only
+  route/ bike/ live/  one folder per tab: its panel, cards, actions and CSS
     route/          RoutePanel (runs useAutoPlan), RouteResult, PlaceInput, useRouteStart
     bike/           BikePanel (camera follows the tracked bike), TrackedBikeCard, StationCard, NearbyList,
-                    BikeChips, actions.ts (useTrackBike, useShowStation, useFindNearest, useTrackedBike), deepLink.ts
+                    BikeChips, OpenInMevo, actions.ts (useTrackBike, useShowStation, useFindNearest,
+                    useTrackedBike), deepLink.ts
     live/           LivePanel
-  components/       shared UI: OpenInMevo
+  map/              MapView (pure MapLibre component), MapContainer (connects it), useMapMarkers, layers.ts,
+                    LocateButton, PickToast
+  panel/            the side panel / bottom sheet: Sheet, Credit, BrandMark
+  ui/               generic components with no app knowledge: Button, IconButton, Segmented, Notice, Pill,
+                    Card, Icon (all icons) + ui.css
+  store/            client state (Zustand): ui (tab, sheet, camera), location, bike (persisted), route
+  api.ts            server data (TanStack Query) + derived indexes: useStationsData, useAllBikes, useSystemStats
   i18n/             index.tsx (provider, plural formatting), pl.ts, en.ts
   lib/              no React state: planner, routing (OSRM), geocode (Nominatim), nearest, mevoApp,
-                    recentPlaces, bikeNumber, storage, viewport, geo, useSheetDrag
+                    recentPlaces, bikeNumber, storage, viewport, geo, useSheetDrag, useTheme
   styles/           tokens.css (theme), base.css
-worker/
-  index.ts          routes, edge cache, cron handler
-  mevo.ts           upstream MEVO sources
-shared/types.ts     API response types used by both sides
+worker/             Cloudflare Worker: index.ts (routes, cache, cron), mevo.ts (upstream sources)
+shared/types.ts     API types used by both web/ and worker/
 public/             favicon, PWA manifest and icons (rendered from the brand mark SVG with sharp)
 ```
 
+Imports inside web/ use the aliases `@/…` (web/) and `@shared/…`; same-folder imports stay `./…`.
+
 Conventions:
 - Server data lives only in TanStack Query; client state only in the Zustand stores — never copy one into the other.
-- Components read stores and data themselves; actions that need both are hooks in `features/*/actions.ts`.
-- `store/` and `lib/` never import `api.ts` or features.
+- Components read stores and data themselves; actions that need both are hooks in `<tab>/actions.ts`.
+- `store/` and `lib/` never import `api.ts` or tab folders; `ui/` imports nothing from the app.
 - Effects live with the feature that needs them; one-off startup goes in `main.tsx`, not a global effects component.
 - Use the `ui/` components instead of raw button/notice classes or inline SVGs; add a variant or an icon there.
 - One component per file, CSS next to the feature that owns it, comments only for the non-obvious "why".

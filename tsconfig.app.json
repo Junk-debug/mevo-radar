@@ -3,17 +3,34 @@
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/app.tsbuildinfo",
     "target": "es2022",
-    "lib": ["es2023", "dom", "dom.iterable"],
+    "lib": [
+      "es2023",
+      "dom",
+      "dom.iterable"
+    ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "@/*": [
+        "./web/*"
+      ],
+      "@shared/*": [
+        "./shared/*"
+      ]
+    }
   },
-  "include": ["src", "shared"]
+  "include": [
+    "web",
+    "shared"
+  ]
 }
