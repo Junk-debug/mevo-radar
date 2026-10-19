@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 import type { Bike, Station } from "../../shared/types";
 import { TRICITY_CENTER, type LatLon } from "../lib/geo";
 import type { TripPlan } from "../lib/planner";
-import type { SheetState } from "../lib/useSheetDrag";
+import type { CameraRequest, SheetState } from "../store/ui";
 import { isPhone } from "../lib/viewport";
 import { addLayers, bikesData, routeData, stationsData, toLngLat } from "./layers";
 import "./map.css";
@@ -27,13 +27,6 @@ export interface MapMarker {
   kind: MarkerKind;
   pos: LatLon;
   label?: string;
-}
-
-export interface CameraRequest {
-  key: number; // a new key re-runs an otherwise identical request
-  center?: LatLon;
-  zoom?: number;
-  bounds?: LatLon[];
 }
 
 interface Props {

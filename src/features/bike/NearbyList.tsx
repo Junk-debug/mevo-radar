@@ -1,9 +1,12 @@
 import { useI18n } from "../../i18n";
 import { formatDistance } from "../../lib/geo";
-import type { NearbyPlace } from "../../lib/nearest";
+import { useBikeStore } from "../../store/bike";
+import { useTrackBike } from "./actions";
 
-export function NearbyList({ places, onPick }: { places: NearbyPlace[]; onPick: (number: string) => void }) {
+export function NearbyList() {
   const { t } = useI18n();
+  const places = useBikeStore((s) => s.nearby.places) ?? [];
+  const onPick = useTrackBike();
   return (
     <ol className="nearby">
       {places.map((place, i) => (

@@ -1,21 +1,30 @@
-import type { Bike, Station } from "../../../shared/types";
+import { useMemo } from "react";
+import { useAllBikes, useStationsData } from "../../api";
 import { OpenInMevo } from "../../components/OpenInMevo";
 import { useI18n } from "../../i18n";
+import { useBikeStore } from "../../store/bike";
+import { useTrackBike } from "./actions";
 import { BikeChips } from "./BikeChips";
-
-interface Props {
-  station: Station;
-  bikes: Bike[];
-  dockedUpdated: number | null;
-  selectedNumber: string | null;
-  onPick: (number: string) => void;
-  onClose: () => void;
-}
 
 const clock = (unix: number) => new Date(unix * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-export function StationCard({ station, bikes, dockedUpdated, selectedNumber, onPick, onClose }: Props) {
+export function StationCard() {
   const { t } = useI18n();
+  const stationId = useBikeStore((s) => s.stationId);
+  const selectedNumber = useBikeStore((s) => s.tracked);
+  const { byId } = useStationsData();
+  const { list, dockedUpdated } = useAllBikes();
+  const onPick = useTrackBike();
+  const onClose = () => useBikeStore.getState().selectStation(null);
+  const bikes = useMemo(
+    () =>
+      list
+        .filter((b) => b.stationId === stationId)
+        .sort((a, b) => Number(b.available) - Number(a.available) || (b.battery ?? -1) - (a.battery ?? -1)),
+    [list, stationId],
+  );
+  const station = stationId ? byId.get(stationId) : undefined;
+  if (!station) return null;
   // Counts are live (GBFS); the number list comes from the station scan, up to ~2 min old.
   const total = station.bikes + station.ebikes;
   const listed = bikes.filter((b) => b.available).length;

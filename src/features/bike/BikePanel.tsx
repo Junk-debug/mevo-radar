@@ -1,33 +1,22 @@
 import { useEffect, useState } from "react";
-import type { Bike, Station } from "../../../shared/types";
 import { useI18n } from "../../i18n";
+import { useBikeStore } from "../../store/bike";
+import { useFindNearest, useTrackBike, useTrackedBike } from "./actions";
 import { NearbyList } from "./NearbyList";
 import { StationCard } from "./StationCard";
 import { TrackedBikeCard } from "./TrackedBikeCard";
-import type { NearbyState } from "./useNearby";
 import "./bike.css";
 
-interface Props {
-  tracked: { number: string | null; bike: Bike | null; lastSeen: Bike | null };
-  nearby: NearbyState;
-  station: Station | null;
-  stationBikes: Bike[];
-  stations: Station[];
-  stationsById: Map<string, Station>;
-  dockedLoaded: boolean;
-  dockedUpdated: number | null;
-  onTrack: (number: string) => void;
-  onUntrack: () => void;
-  onFindNearest: () => void;
-  onCloseStation: () => void;
-}
-
-export function BikePanel(p: Props) {
+export function BikePanel() {
   const { t } = useI18n();
-  const { number, bike, lastSeen } = p.tracked;
+  const { number, bike } = useTrackedBike();
+  const nearby = useBikeStore((s) => s.nearby);
+  const stationId = useBikeStore((s) => s.stationId);
+  const track = useTrackBike();
+  const findNearest = useFindNearest();
   const [query, setQuery] = useState(number ?? "");
   useEffect(() => setQuery(bike?.number ?? number ?? ""), [number, bike?.number]);
-  const showingNearby = !!p.nearby.places?.length;
+  const showingNearby = !!nearby.places?.length;
 
   return (
     <div className="panel-body">
@@ -35,7 +24,7 @@ export function BikePanel(p: Props) {
         className="bike-search"
         onSubmit={(e) => {
           e.preventDefault();
-          if (query.trim()) p.onTrack(query);
+          if (query.trim()) track(query);
         }}
       >
         <label htmlFor="bike-q" className="sr-only">{t("bikeSearchPlaceholder")}</label>
@@ -52,40 +41,19 @@ export function BikePanel(p: Props) {
         <button className="primary" type="submit">{t("find")}</button>
       </form>
 
-      <button type="button" className="nearest-btn" onClick={p.onFindNearest} disabled={p.nearby.loading}>
+      <button type="button" className="nearest-btn" onClick={findNearest} disabled={nearby.loading}>
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <circle cx="12" cy="12" r="3.5" fill="currentColor" />
           <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
         </svg>
-        {p.nearby.loading ? t("findingNearest") : t("nearestBike")}
+        {nearby.loading ? t("findingNearest") : t("nearestBike")}
       </button>
 
-      {p.nearby.error && <p className="notice notice-warn">{t(p.nearby.error === "location" ? "nearestNeedsLocation" : "nearestNone")}</p>}
-      {showingNearby && <NearbyList places={p.nearby.places!} onPick={p.onTrack} />}
-      {!number && !p.station && !showingNearby && <p className="hint">{t("bikeHint")}</p>}
-
-      {number && !showingNearby && (
-        <TrackedBikeCard
-          number={number}
-          bike={bike}
-          lastSeen={lastSeen}
-          dockedLoaded={p.dockedLoaded}
-          stations={p.stations}
-          stationsById={p.stationsById}
-          onUntrack={p.onUntrack}
-        />
-      )}
-
-      {p.station && (
-        <StationCard
-          station={p.station}
-          bikes={p.stationBikes}
-          dockedUpdated={p.dockedUpdated}
-          selectedNumber={number}
-          onPick={p.onTrack}
-          onClose={p.onCloseStation}
-        />
-      )}
+      {nearby.error && <p className="notice notice-warn">{t(nearby.error === "location" ? "nearestNeedsLocation" : "nearestNone")}</p>}
+      {showingNearby && <NearbyList />}
+      {!number && !stationId && !showingNearby && <p className="hint">{t("bikeHint")}</p>}
+      {number && !showingNearby && <TrackedBikeCard />}
+      {stationId && <StationCard />}
     </div>
   );
 }

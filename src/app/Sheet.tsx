@@ -1,27 +1,37 @@
 import { useRef, type ReactNode } from "react";
+import { useAllBikes, useStationsData } from "../api";
+import { useEnterBikeTab } from "../features/bike/actions";
 import { useI18n, type Lang } from "../i18n";
-import { useSheetDrag, type SheetState } from "../lib/useSheetDrag";
+import { useSheetDrag } from "../lib/useSheetDrag";
 import { isPhone } from "../lib/viewport";
+import { useUi, type Tab } from "../store/ui";
 import { BrandMark } from "./BrandMark";
 import { Credit } from "./Credit";
 import "./sheet.css";
 
-export type Tab = "route" | "bike" | "live";
 const TABS: Tab[] = ["route", "bike", "live"];
 const TAB_LABEL = { route: "tabRoute", bike: "tabBike", live: "tabLive" } as const;
 
-interface Props {
-  state: SheetState;
-  onState: (s: SheetState) => void;
-  tab: Tab;
-  onTab: (t: Tab) => void;
-  online: boolean;
-  status: string;
-  children: ReactNode;
+function useStatusLine() {
+  const { t } = useI18n();
+  const { stations, error } = useStationsData();
+  const bikes = useAllBikes();
+  const total = stations.reduce((n, s) => n + s.bikes + s.ebikes, 0) + bikes.freeBikes.length;
+  return {
+    online: !error && !bikes.error,
+    status: stations.length ? t("stationsCount", { s: stations.length, b: total }) : "…",
+  };
 }
 
-export function Sheet({ state, onState, tab, onTab, online, status, children }: Props) {
+export function Sheet({ children }: { children: ReactNode }) {
   const { t, lang, setLang } = useI18n();
+  const { tab, sheet: state, setSheet: onState, showTab } = useUi();
+  const { online, status } = useStatusLine();
+  const enterBikeTab = useEnterBikeTab();
+  const onTab = (next: Tab) => {
+    showTab(next);
+    if (next === "bike") enterBikeTab();
+  };
   const ref = useRef<HTMLElement>(null);
   const drag = useSheetDrag(ref, state, onState);
   const open = state !== "peek";

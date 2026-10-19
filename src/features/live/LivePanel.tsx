@@ -1,15 +1,10 @@
 import { useMemo } from "react";
-import type { Bike, Station, SystemStats } from "../../../shared/types";
+import { useAllBikes, useStationsData, useSystemStats } from "../../api";
 import { useI18n } from "../../i18n";
+import { useShowStation } from "../bike/actions";
 import "./live.css";
 
-interface Props {
-  stats: SystemStats | undefined;
-  statsError: boolean;
-  stations: Station[];
-  bikes: Bike[];
-  onStation: (id: string) => void;
-}
+
 
 const BUCKETS = [0, 20, 40, 60, 80] as const; // battery % bucket starts
 
@@ -23,8 +18,12 @@ function Tile({ label, value, note, tone }: { label: string; value: string; note
   );
 }
 
-export function LivePanel({ stats, statsError, stations, bikes, onStation }: Props) {
+export function LivePanel() {
   const { t, lang } = useI18n();
+  const { data: stats, isError: statsError } = useSystemStats();
+  const { stations } = useStationsData();
+  const { list: bikes } = useAllBikes();
+  const onStation = useShowStation();
   const locale = lang === "pl" ? "pl-PL" : "en-GB";
   const num = (n: number) => new Intl.NumberFormat(locale).format(n);
   const compact = (n: number) =>

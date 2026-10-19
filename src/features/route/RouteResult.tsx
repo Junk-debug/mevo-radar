@@ -3,12 +3,12 @@ import { OpenInMevo } from "../../components/OpenInMevo";
 import { useI18n } from "../../i18n";
 import { formatDistance, formatDuration } from "../../lib/geo";
 import { bikesAt, googleMapsUrl, LOW_COUNT, type BikePreference, type TripPlan } from "../../lib/planner";
+import { useTrackBike } from "../bike/actions";
 import { BikeChips } from "../bike/BikeChips";
 
 interface Props {
   plan: TripPlan;
   pref: BikePreference;
-  onBike: (number: string) => void;
 }
 
 const minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
@@ -69,8 +69,9 @@ function Steps({ plan }: { plan: TripPlan }) {
   );
 }
 
-export function RouteResult({ plan, pref, onBike }: Props) {
+export function RouteResult({ plan, pref }: Props) {
   const { t } = useI18n();
+  const onBike = useTrackBike();
   const { pickup, dropoff, legs } = plan;
   const total = legs.reduce((s, l) => s + l.duration, 0);
   const walkToBike = minutes(legs[0].duration);

@@ -1,21 +1,19 @@
 import { useI18n } from "../i18n";
-import type { LocationStatus } from "../lib/useLocation";
+import { useLocationStore } from "../store/location";
+import { useUi } from "../store/ui";
 
-interface Props {
-  status: LocationStatus;
-  known: boolean;
-  showHint: boolean;
-  onClick: () => void;
-}
-
-export function LocateButton({ status, known, showHint, onClick }: Props) {
+export function LocateButton() {
   const { t } = useI18n();
+  const { pos, status, hint, locate } = useLocationStore();
   return (
     <>
       <button
         type="button"
-        className={`locate-btn${known ? " on" : ""}${status === "locating" ? " busy" : ""}`}
-        onClick={onClick}
+        className={`locate-btn${pos ? " on" : ""}${status === "locating" ? " busy" : ""}`}
+        onClick={async () => {
+          const found = await locate();
+          if (found) useUi.getState().focusOn(found, 16);
+        }}
         aria-label={t("whereAmI")}
         title={t("whereAmI")}
       >
@@ -25,7 +23,7 @@ export function LocateButton({ status, known, showHint, onClick }: Props) {
           <path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       </button>
-      {showHint && (
+      {hint && (
         <p className="map-toast locate-hint" role="status">
           {t(status === "denied" ? "locationDenied" : "locationUnavailable")}
         </p>

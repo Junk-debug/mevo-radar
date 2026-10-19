@@ -1,5 +1,5 @@
-import type { LatLon } from "../../lib/geo";
-import { load, save } from "../../lib/storage";
+import type { LatLon } from "./geo";
+import { load, save } from "./storage";
 
 export interface SavedPlace {
   label: string;

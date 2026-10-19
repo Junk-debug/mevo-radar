@@ -1,19 +1,12 @@
 import { useState } from "react";
 import type { Bike, Station } from "../../../shared/types";
+import { useAllBikes, useStationsData } from "../../api";
 import { OpenInMevo } from "../../components/OpenInMevo";
 import { useI18n } from "../../i18n";
 import { formatDistance, haversine } from "../../lib/geo";
 import { stationPos, walkingDirectionsUrl } from "../../lib/planner";
-
-interface Props {
-  number: string;
-  bike: Bike | null;
-  lastSeen: Bike | null;
-  dockedLoaded: boolean;
-  stations: Station[];
-  stationsById: Map<string, Station>;
-  onUntrack: () => void;
-}
+import { useBikeStore } from "../../store/bike";
+import { useTrackedBike } from "./actions";
 
 function nearestStation(stations: Station[], b: Bike) {
   let best: { station: Station; distance: number } | null = null;
@@ -24,10 +17,15 @@ function nearestStation(stations: Station[], b: Bike) {
   return best;
 }
 
-export function TrackedBikeCard({ number, bike, lastSeen, dockedLoaded, stations, stationsById, onUntrack }: Props) {
+export function TrackedBikeCard() {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
-  const station = bike?.stationId ? stationsById.get(bike.stationId) : null;
+  const { number, bike, lastSeen } = useTrackedBike();
+  const { stations, byId } = useStationsData();
+  const { dockedLoaded } = useAllBikes();
+  const onUntrack = () => useBikeStore.getState().setTracked(null);
+  if (!number) return null;
+  const station = bike?.stationId ? byId.get(bike.stationId) : null;
   const near = bike && !station ? nearestStation(stations, bike) : null;
   const where = bike ?? lastSeen;
 

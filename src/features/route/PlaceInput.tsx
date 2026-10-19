@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { useI18n } from "../../i18n";
 import { searchPlaces } from "../../lib/geocode";
-import { recentPlaces } from "./recentPlaces";
-import type { Field, PlaceValue } from "./useRoutePlanner";
+import { recentPlaces } from "../../lib/recentPlaces";
+import type { Field, PlaceValue } from "../../store/route";
 
 interface Props {
   field: Field;

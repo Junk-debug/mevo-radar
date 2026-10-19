@@ -1,8 +1,6 @@
 import { useRef, type MouseEvent, type PointerEvent, type RefObject } from "react";
+import type { SheetState } from "../store/ui";
 import { isPhone } from "./viewport";
-
-/** Phone bottom sheet height. On desktop only "peek" (hidden) vs anything else (shown) matters. */
-export type SheetState = "peek" | "half" | "full";
 
 const START = 6; // px of movement before a press becomes a drag (so taps on tabs still work)
 const STEP = 60; // px to move one step (peek ↔ half ↔ full)
