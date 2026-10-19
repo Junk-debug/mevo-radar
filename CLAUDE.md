@@ -17,13 +17,13 @@ One Cloudflare Worker serves both the built React app (static assets) and the `/
 
 ```
 web/                browser app (Vite root): index.html, public/ (favicon, PWA manifest, icons)
-  main.tsx          entry: providers, global styles, startup (geolocation, bike #hash links)
+  main.tsx          entry: providers, global styles, startup (geolocation, URL hash ↔ tracked bike sync)
   App.tsx           layout only
   route/ bike/ live/  one folder per tab: its panel, cards, actions and CSS
     route/          RoutePanel (runs useAutoPlan), RouteResult, PlaceInput, useRouteStart
     bike/           BikePanel (camera follows the tracked bike), TrackedBikeCard, StationCard, NearbyList,
                     BikeChips, OpenInMevo, actions.ts (useTrackBike, useShowStation, useFindNearest,
-                    useTrackedBike), deepLink.ts
+                    useTrackedBike), deepLink.ts (the only code that touches location.hash)
     live/           LivePanel
   map/              MapView (pure MapLibre component), MapContainer (connects it), useMapMarkers, layers.ts,
                     LocateButton, PickToast
@@ -31,7 +31,7 @@ web/                browser app (Vite root): index.html, public/ (favicon, PWA m
   ui/               generic components with no app knowledge: Button, IconButton, Segmented, Notice, Pill,
                     Card, Icon (all icons) + ui.css
   store/            client state (Zustand): ui (tab, sheet, camera), location, bike (persisted), route
-  api.ts            server data (TanStack Query) + derived indexes: useStationsData, useAllBikes, useSystemStats
+  api.ts            server data (TanStack Query); derived indexes via `select` / `useQueries` `combine`
   i18n/             index.tsx (provider, plural formatting), pl.ts, en.ts
   lib/              no React state: planner, routing (OSRM), geocode (Nominatim), nearest, mevoApp,
                     recentPlaces, bikeNumber, storage, viewport, geo, useSheetDrag, useTheme

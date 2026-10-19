@@ -26,7 +26,7 @@ interface UiState {
 const opened = (s: SheetState): SheetState => (s === "peek" ? "half" : s);
 
 export const useUi = create<UiState>()((set) => ({
-  tab: location.hash.length > 1 ? "bike" : "route",
+  tab: "route",
   sheet: "half",
   camera: null,
   showTab: (tab) => set((s) => ({ tab, sheet: opened(s.sheet) })),

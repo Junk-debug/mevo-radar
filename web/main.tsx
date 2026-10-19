@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { listenToBikeLinks } from "@/bike/deepLink";
+import { syncBikeLinks } from "@/bike/deepLink";
 import { I18nProvider } from "@/i18n";
 import { useLocationStore } from "@/store/location";
 import { App } from "./App";
@@ -14,7 +14,7 @@ const queryClient = new QueryClient({
 });
 
 useLocationStore.getState().init();
-listenToBikeLinks();
+syncBikeLinks();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
