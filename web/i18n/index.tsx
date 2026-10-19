@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { load, save } from "@/lib/storage";
+import { load, save } from "@/utils/storage";
 import { en } from "./en";
 import { pl, type Dict } from "./pl";
 

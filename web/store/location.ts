@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { LatLon } from "@/lib/geo";
+import type { LatLon } from "@/utils/geo";
 
 export type LocationStatus = "idle" | "locating" | "ok" | "denied" | "unavailable";
 

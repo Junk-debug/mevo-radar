@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { NearbyPlace } from "@/lib/nearest";
+import type { NearbyPlace } from "@/services/nearest";
 
 export interface NearbyState {
   loading: boolean;

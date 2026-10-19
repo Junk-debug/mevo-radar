@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { LatLon } from "@/lib/geo";
+import type { LatLon } from "@/utils/geo";
 
 export type Tab = "route" | "bike" | "live";
 /** Phone bottom sheet height. On desktop only "peek" (hidden) vs anything else (shown) matters. */

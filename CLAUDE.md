@@ -19,24 +19,26 @@ One Cloudflare Worker serves both the built React app (static assets) and the `/
 web/                browser app (Vite root): index.html, public/ (favicon, PWA manifest, icons)
   main.tsx          entry: providers, global styles, startup (geolocation, URL hash ↔ tracked bike sync)
   App.tsx           layout only
-  route/ bike/ live/  one folder per tab: its panel, cards, actions and CSS
-    route/          RoutePanel (runs useAutoPlan), RouteResult, PlaceInput, useRouteStart
+  components/       React components, one folder per area; a hook used by one component lives next to it
+    route/          RoutePanel, RouteResult, PlaceInput, useAutoPlan
     bike/           BikePanel (camera follows the tracked bike), TrackedBikeCard, StationCard, NearbyList,
-                    BikeChips, OpenInMevo, actions.ts (useTrackBike, useShowStation, useFindNearest,
-                    useTrackedBike), deepLink.ts (the only code that touches location.hash)
+                    BikeChips, OpenInMevo, useFindNearest
     live/           LivePanel
-  map/              MapView (pure MapLibre component), MapContainer (connects it), useMapMarkers, layers.ts,
-                    LocateButton, PickToast
-  panel/            the side panel / bottom sheet: Sheet, Credit, BrandMark
-  ui/               generic components with no app knowledge: Button, IconButton, Segmented, Notice, Pill,
-                    Card, Icon (all icons) + ui.css
-  store/            client state (Zustand): ui (tab, sheet, camera), location, bike (persisted), route
-  api.ts            server data (TanStack Query); derived indexes via `select` / `useQueries` `combine`
+    map/            MapView (pure MapLibre component), MapContainer (connects it), useMapMarkers, useTheme,
+                    layers.ts, LocateButton, PickToast, MapToast
+    panel/          the side panel / bottom sheet: Sheet, useSheetDrag, ErrorBoundary, Credit, BrandMark
+    ui/             generic components with no app knowledge: Button, IconButton, Segmented, Notice, Pill,
+                    Card, Actions, StopTitle, Icon (all icons), cx
+  hooks/            hooks shared by several components: useTrackBike, useShowStation, useTrackedBike, useRouteStart
+  store/            client state (Zustand): ui (tab, sheet, camera), location, bike (persisted), route;
+                    urlSync.ts (the only code that touches location.hash)
+  services/         talks to the network: api.ts (TanStack Query for /api/*, derived indexes via `select` /
+                    `useQueries` `combine`), routing (OSRM), geocode (Nominatim), planner, nearest
+  utils/            pure helpers: bikeNumber, geo, mevoApp, recentPlaces, storage, viewport
   i18n/             index.tsx (provider, plural formatting), pl.ts, en.ts
-  lib/              no React state: planner, routing (OSRM), geocode (Nominatim), nearest, mevoApp,
-                    recentPlaces, bikeNumber, storage, viewport, geo, useSheetDrag, useTheme
-  styles/           tokens.css (theme), base.css
-worker/             Cloudflare Worker: index.ts (routes, cache, cron), mevo.ts (upstream sources)
+  styles/           index.css (Tailwind entry, layer order), tokens.css (theme variables), base.css,
+                    map.css (MapLibre controls and DOM markers)
+worker/             Cloudflare Worker: index.ts (routes, cache, cron), mevo.ts (upstream sources), schemas.ts (zod)
 shared/types.ts     API types used by both web/ and worker/
 ```
 
@@ -44,11 +46,15 @@ Imports inside web/ use the aliases `@/…` (web/) and `@shared/…`; same-folde
 
 Conventions:
 - Server data lives only in TanStack Query; client state only in the Zustand stores — never copy one into the other.
-- Components read stores and data themselves; actions that need both are hooks in `<tab>/actions.ts`.
-- `store/` and `lib/` never import `api.ts` or tab folders; `ui/` imports nothing from the app.
+- Components read stores and data themselves; actions that need both are hooks.
+- A hook used by one component sits next to it; only hooks shared by several components go in `hooks/`, one per file.
+- `store/`, `services/` and `utils/` never import components or hooks; `utils/` imports nothing but `utils/`;
+  `components/ui/` imports nothing from the app.
 - Effects live with the feature that needs them; one-off startup goes in `main.tsx`, not a global effects component.
-- Use the `ui/` components instead of raw button/notice classes or inline SVGs; add a variant or an icon there.
-- One component per file, CSS next to the feature that owns it, comments only for the non-obvious "why".
+- Use the `components/ui/` kit instead of repeating Tailwind class lists or inline SVGs; add a variant or an icon there.
+- Style with Tailwind utilities using the theme tokens (`bg-surface`, `text-muted`, `border-line`, `desktop:` /
+  `max-desktop:` at 900px). Global CSS only where utilities can't reach (MapLibre internals, DOM markers).
+- One component per file, comments only for the non-obvious "why".
 
 - Dev: `npm run dev` — Vite with `@cloudflare/vite-plugin` runs the app and the Worker together (http://localhost:5173).
 - Typecheck: `npm run typecheck`. Build: `npm run build`. Deploy: `npm run deploy` (or push to `main`, see `.github/workflows/deploy.yml`).

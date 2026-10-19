@@ -7,7 +7,7 @@
 @import "tailwindcss/utilities.css" layer(utilities) source("../");
 @import "./tokens.css";
 @import "./base.css" layer(base);
-@import "../map/map.css" layer(components);
+@import "./map.css" layer(components);
 
 /* Plain :hover like before, also on touch screens (Tailwind's default skips devices without hover). */
 @custom-variant hover (&:hover);

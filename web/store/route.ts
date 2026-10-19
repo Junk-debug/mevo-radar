@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import type { LatLon } from "@/lib/geo";
-import { reverseGeocode } from "@/lib/geocode";
-import type { BikePreference, TripPlan } from "@/lib/planner";
-import { rememberPlace } from "@/lib/recentPlaces";
+import { reverseGeocode } from "@/services/geocode";
+import type { BikePreference, TripPlan } from "@/services/planner";
+import type { LatLon } from "@/utils/geo";
+import { rememberPlace } from "@/utils/recentPlaces";
 
 export interface PlaceValue {
   label: string;

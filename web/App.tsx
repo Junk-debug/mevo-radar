@@ -1,12 +1,12 @@
-import { BikePanel } from "@/bike/BikePanel";
-import { LivePanel } from "@/live/LivePanel";
-import { LocateButton } from "@/map/LocateButton";
-import { MapContainer } from "@/map/MapContainer";
-import { PickToast } from "@/map/PickToast";
-import { Sheet } from "@/panel/Sheet";
-import { RoutePanel } from "@/route/RoutePanel";
+import { BikePanel } from "@/components/bike/BikePanel";
+import { LivePanel } from "@/components/live/LivePanel";
+import { LocateButton } from "@/components/map/LocateButton";
+import { MapContainer } from "@/components/map/MapContainer";
+import { PickToast } from "@/components/map/PickToast";
+import { ErrorBoundary } from "@/components/panel/ErrorBoundary";
+import { Sheet } from "@/components/panel/Sheet";
+import { RoutePanel } from "@/components/route/RoutePanel";
 import { useUi } from "@/store/ui";
-import { ErrorBoundary } from "@/ui";
 
 export function App() {
   const tab = useUi((s) => s.tab);
