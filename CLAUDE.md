@@ -19,9 +19,10 @@ One Cloudflare Worker serves both the built React app (static assets) and the `/
 src/
   main.tsx          entry: providers + global styles
   api.ts            TanStack Query hooks for /api/*, bike-number lookup (useAllBikes)
-  app/              shell: App (glue: data, tabs, camera, map-pick mode), Sheet (panel/bottom sheet,
-                    header, tabs), Credit, BrandMark, useTheme, sheet.css
-  map/              MapView (MapLibre lifecycle), layers.ts (GeoJSON + layer styles), LocateButton, map.css
+  app/              App (pure composition), useAppController (wires tabs, map and panel; returns props),
+                    useAppData, useNavigation (tab/sheet/camera), useLocate, Sheet, Credit, BrandMark, useTheme
+  features/*/use*Tab.ts  each tab's state and actions + its map markers and panel props
+  map/              MapView (MapLibre lifecycle), layers.ts (GeoJSON + layer styles), LocateButton, MapToast, map.css
   features/
     route/          RoutePanel, RouteResult, PlaceInput, useRoutePlanner (auto-planning, map picks,
                     reverse geocoding), recentPlaces, route.css
