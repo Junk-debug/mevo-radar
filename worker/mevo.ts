@@ -1,50 +1,48 @@
 // GBFS (official) has stations and counts; frame numbers only come from the Urban Sharing
 // GraphQL API behind rowermevo.pl, which answers only requests with its Origin.
 
+import type { z } from "zod";
 import type { Bike, BikeType, Station, StationsResponse, SystemStats } from "../shared/types";
+import {
+  dockGroupVehiclesResult,
+  freeBikeStatusFeed,
+  freeFloatingVehiclesResult,
+  parseUpstream,
+  stationInformationFeed,
+  stationStatusFeed,
+  systemStatsResult,
+  type Vehicle,
+} from "./schemas";
 
 const GBFS = "https://gbfs.urbansharing.com/rowermevo.pl";
 const GRAPHQL = "https://core.urbansharing.com/public/api/v1/graphql";
 const SYSTEM_ID = "inurba-gdansk";
 const VEHICLE_FIELDS = "number batteryCharge currentRange category available";
 const STATIONS_PER_QUERY = 40;
+const DOCKED_SCAN_CONCURRENCY = 8; // gentler than all at once, yet a scan still fits the 30 s waitUntil of a stale refresh
+const CHUNK_RETRY_DELAY_MS = 1000;
+const MAX_FAILED_CHUNK_SHARE = 0.5;
+const SUBREQUEST_LIMIT = 50; // Workers free plan, per invocation
+const STATION_FEED_REQUESTS = 2;
 
-interface GbfsStationInfo {
-  station_id: string;
-  name: string;
-  address?: string;
-  lat: number;
-  lon: number;
-  capacity?: number;
-}
+export const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-interface GbfsStationStatus {
-  station_id: string;
-  num_bikes_available: number;
-  num_docks_available?: number;
-  is_renting: boolean;
-  is_returning: boolean;
-  vehicle_types_available?: { vehicle_type_id: string; count: number }[];
-}
-
-interface GqlVehicle {
-  number: string;
-  batteryCharge: number | null;
-  currentRange: number | null;
-  category: string;
-  available: boolean;
-  location?: { location: { lat: number; lng: number } };
-}
-
-async function gbfs<T>(feed: string): Promise<{ last_updated: number; data: T }> {
+async function gbfs<T extends z.ZodType>(feed: string, schema: T): Promise<z.infer<T>> {
+  const source = `GBFS ${feed}`;
   const res = await fetch(`${GBFS}/${feed}.json`, {
     headers: { "Client-Identifier": "mevo-radar" },
   });
-  if (!res.ok) throw new Error(`GBFS ${feed}: HTTP ${res.status}`);
-  return res.json();
+  if (!res.ok) throw new Error(`${source}: HTTP ${res.status}`);
+  return parseUpstream(source, schema, await res.json());
 }
 
-async function graphql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+async function graphql<T extends z.ZodType>(
+  operation: string,
+  schema: T,
+  query: string,
+  variables: Record<string, unknown> = {},
+): Promise<z.infer<T>> {
+  const source = `GraphQL ${operation}`;
   const res = await fetch(GRAPHQL, {
     method: "POST",
     headers: {
@@ -54,19 +52,19 @@ async function graphql<T>(query: string, variables: Record<string, unknown> = {}
     },
     body: JSON.stringify({ query, variables }),
   });
-  if (!res.ok) throw new Error(`GraphQL: HTTP ${res.status}`);
-  const body = (await res.json()) as { data?: T; errors?: { message: string }[] };
-  if (!body.data) throw new Error(`GraphQL: ${body.errors?.[0]?.message ?? "no data"}`);
-  return body.data;
+  if (!res.ok) throw new Error(`${source}: HTTP ${res.status}`);
+  const body = (await res.json()) as { data?: unknown; errors?: { message?: string }[] } | null;
+  if (!body?.data) throw new Error(`${source}: ${body?.errors?.[0]?.message ?? "no data"}`);
+  return parseUpstream(source, schema, body.data);
 }
 
-function toBike(v: GqlVehicle, lat: number, lon: number, stationId: string | null, appId: string | null = null): Bike {
+function toBike(v: Vehicle, lat: number, lon: number, stationId: string | null, appId: string | null = null): Bike {
   return {
     number: v.number,
     type: (v.category === "ebike" ? "ebike" : "bike") as BikeType,
     available: v.available,
-    battery: v.batteryCharge ?? null,
-    range: v.currentRange ?? null,
+    battery: v.batteryCharge,
+    range: v.currentRange,
     lat,
     lon,
     stationId,
@@ -76,8 +74,8 @@ function toBike(v: GqlVehicle, lat: number, lon: number, stationId: string | nul
 
 async function stationFeeds() {
   const [info, status] = await Promise.all([
-    gbfs<{ stations: GbfsStationInfo[] }>("station_information"),
-    gbfs<{ stations: GbfsStationStatus[] }>("station_status"),
+    gbfs("station_information", stationInformationFeed),
+    gbfs("station_status", stationStatusFeed),
   ]);
   return { info: info.data.stations, status: status.data.stations, updated: status.last_updated };
 }
@@ -106,11 +104,17 @@ export async function fetchStations(): Promise<StationsResponse> {
 
 export async function fetchFreeBikes(): Promise<Bike[]> {
   const [data, gbfsBikes] = await Promise.all([
-    graphql<{ freeFloatingVehicles: GqlVehicle[] }>(
+    graphql(
+      "freeFloatingVehicles",
+      freeFloatingVehiclesResult,
       `query($systemId: ID!) { freeFloatingVehicles(systemId: $systemId) { ${VEHICLE_FIELDS} location { location { lat lng } } } }`,
       { systemId: SYSTEM_ID },
     ),
-    gbfs<{ bikes: { bike_id: string; lat: number; lon: number }[] }>("free_bike_status").catch(() => null),
+    // Only adds app deep-link ids; the bikes are still useful without them.
+    gbfs("free_bike_status", freeBikeStatusFeed).catch((e: unknown) => {
+      console.warn(`Free bikes served without MEVO app ids: ${errorMessage(e)}`);
+      return null;
+    }),
   ]);
   // GraphQL has frame numbers, GBFS has the ids the MEVO app links use. Both report the same
   // coordinates for the same bike, so join on exact position (ambiguous positions get no id).
@@ -119,31 +123,20 @@ export async function fetchFreeBikes(): Promise<Bike[]> {
     const key = `${b.lat},${b.lon}`;
     byPos.set(key, byPos.has(key) ? null : b.bike_id);
   }
-  return data.freeFloatingVehicles
-    .filter((v) => v.location)
-    .map((v) => {
-      const { lat, lng } = v.location!.location;
-      return toBike(v, lat, lng, null, byPos.get(`${lat},${lng}`) ?? null);
-    });
+  return data.freeFloatingVehicles.flatMap((v) => {
+    if (!v.location) return [];
+    const { lat, lng } = v.location.location;
+    return [toBike(v, lat, lng, null, byPos.get(`${lat},${lng}`) ?? null)];
+  });
 }
 
 export async function fetchSystemStats(): Promise<SystemStats> {
-  const data = await graphql<{
-    systemActiveTripCount: { count: number } | null;
-    systemStats: {
-      tripsToday: number;
-      tripsYesterday: number;
-      highscoreTrips: number;
-      tripsThisYear: number;
-      tripsLastYear: number;
-      uniqueUsersToday: number;
-      highscoreUniqueUsers: number;
-      highscoreUniqueUsersDate: string | null;
-      medianDurationToday: number;
-      medianDurationThisYear: number;
-    };
-  }>(`query { systemActiveTripCount { count } systemStats { tripsToday tripsYesterday highscoreTrips tripsThisYear tripsLastYear
-    uniqueUsersToday highscoreUniqueUsers highscoreUniqueUsersDate medianDurationToday medianDurationThisYear } }`);
+  const data = await graphql(
+    "systemStats",
+    systemStatsResult,
+    `query { systemActiveTripCount { count } systemStats { tripsToday tripsYesterday highscoreTrips tripsThisYear tripsLastYear
+    uniqueUsersToday highscoreUniqueUsers highscoreUniqueUsersDate medianDurationToday medianDurationThisYear } }`,
+  );
   const s = data.systemStats;
   return {
     updated: Math.floor(Date.now() / 1000),
@@ -161,6 +154,26 @@ export async function fetchSystemStats(): Promise<SystemStats> {
   };
 }
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Runs `task` over `items` with at most `limit` in flight; results keep the input order. */
+async function mapWithConcurrency<T, R>(items: T[], limit: number, task: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const runner = async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await task(items[index], index);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runner));
+  return results;
+}
+
+/**
+ * Bikes standing at stations. A station chunk that fails twice is skipped so one upstream hiccup
+ * (e.g. a 504) doesn't lose the whole scan; if most chunks fail, it throws so callers keep the previous data.
+ */
 export async function fetchDockedBikes(): Promise<Bike[]> {
   const { info, status } = await stationFeeds();
   const coords = new Map(info.map((s) => [s.station_id, s]));
@@ -171,17 +184,43 @@ export async function fetchDockedBikes(): Promise<Bike[]> {
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += STATIONS_PER_QUERY) chunks.push(ids.slice(i, i + STATIONS_PER_QUERY));
 
-  const results = await Promise.all(
-    chunks.map((chunk) =>
-      graphql<Record<string, GqlVehicle[] | null>>(
-        `query { ${chunk.map((id) => `s${id}: dockGroupVehicles(dockGroupId: "${id}") { ${VEHICLE_FIELDS} }`).join(" ")} }`,
-      ),
-    ),
-  );
+  const queryChunk = (chunk: string[]) =>
+    graphql(
+      "dockGroupVehicles",
+      dockGroupVehiclesResult,
+      `query { ${chunk.map((id) => `s${id}: dockGroupVehicles(dockGroupId: "${id}") { ${VEHICLE_FIELDS} }`).join(" ")} }`,
+    );
+
+  // Retries share whatever the first attempts leave of the subrequest limit.
+  let retriesLeft = SUBREQUEST_LIMIT - STATION_FEED_REQUESTS - chunks.length;
+  const results = await mapWithConcurrency(chunks, DOCKED_SCAN_CONCURRENCY, async (chunk, index) => {
+    const label = `Docked chunk ${index + 1}/${chunks.length} (stations ${chunk[0]}-${chunk[chunk.length - 1]})`;
+    try {
+      return await queryChunk(chunk);
+    } catch (firstError) {
+      if (retriesLeft <= 0) {
+        console.warn(`${label} skipped, no subrequests left to retry: ${errorMessage(firstError)}`);
+        return null;
+      }
+      retriesLeft--;
+      await delay(CHUNK_RETRY_DELAY_MS);
+      try {
+        return await queryChunk(chunk);
+      } catch (retryError) {
+        console.warn(`${label} skipped after a retry: ${errorMessage(retryError)}`);
+        return null;
+      }
+    }
+  });
+
+  const failedChunks = results.filter((result) => result === null).length;
+  if (failedChunks > chunks.length * MAX_FAILED_CHUNK_SHARE) {
+    throw new Error(`Docked scan failed: ${failedChunks} of ${chunks.length} station chunks failed`);
+  }
 
   const bikes: Bike[] = [];
   for (const result of results) {
-    for (const [alias, vehicles] of Object.entries(result)) {
+    for (const [alias, vehicles] of Object.entries(result ?? {})) {
       const id = alias.slice(1);
       const st = coords.get(id);
       if (!st || !vehicles) continue;
