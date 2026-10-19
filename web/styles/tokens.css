@@ -17,14 +17,6 @@
   --walk: #0d1b2a;
   --me: #1a73e8;
   --shadow: 0 18px 50px rgb(13 27 42 / 0.16), 0 2px 6px rgb(13 27 42 / 0.08);
-
-  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
-  --font-body: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
-
-  --r-lg: 18px;
-  --r-md: 12px;
-  --r-sm: 8px;
   color-scheme: light;
 }
 
@@ -47,4 +39,45 @@
     --shadow: 0 18px 50px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
     color-scheme: dark;
   }
+}
+
+/* Colours switch with the theme above, so utilities read the tokens at runtime (inline). */
+@theme inline {
+  --color-*: initial;
+  --color-white: #fff;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-ok: var(--ok);
+  --color-low: var(--low);
+  --color-gone: var(--gone);
+  --color-ebike: var(--ebike);
+  --color-bike: var(--bike);
+  --color-walk: var(--walk);
+  --color-me: var(--me);
+  --shadow-panel: var(--shadow);
+}
+
+/* Static in both themes; `static` keeps them on :root for base.css and the map markers. */
+@theme static {
+  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --font-body: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+
+  /* Phone layout below this width; matches PHONE_QUERY in lib/viewport.ts. */
+  --breakpoint-desktop: 900px;
+}
+
+@theme {
+  --animate-live-pulse: live-pulse 1.8s ease-out infinite;
+  @keyframes live-pulse { to { box-shadow: 0 0 0 10px transparent; } }
 }

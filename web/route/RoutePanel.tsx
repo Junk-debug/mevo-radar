@@ -9,7 +9,6 @@ import { PlaceInput } from "./PlaceInput";
 import { RouteResult } from "./RouteResult";
 import { useAutoPlan } from "./useAutoPlan";
 import { useRouteStart } from "./useRouteStart";
-import "./route.css";
 
 const PREFS: { value: BikePreference; label: "prefAny" | "prefEbike" | "prefBike" }[] = [
   { value: "any", label: "prefAny" },
@@ -37,8 +36,8 @@ export function RoutePanel() {
   const { to, pref, plan, status, choose, setPref, swap } = useRouteStore();
 
   return (
-    <div className="panel-body">
-      <div className="places">
+    <>
+      <div className="relative grid border border-line rounded-md bg-surface-2">
         <PlaceInput
           field="from"
           value={start}
@@ -56,14 +55,14 @@ export function RoutePanel() {
           onPickOnMap={() => pickOnMap("to")}
           onFocus={expandOnPhone}
         />
-        <IconButton icon="swap" variant="round" className="swap" label={t("swap")} onClick={() => swap(start)} disabled={!start && !to} />
+        <IconButton icon="swap" variant="round" className="absolute right-2 top-1/2 -translate-y-1/2" label={t("swap")} onClick={() => swap(start)} disabled={!start && !to} />
       </div>
 
       <Segmented label={t("type")} value={pref} onChange={setPref} options={PREFS.map((p) => ({ value: p.value, label: t(p.label) }))} />
 
-      {status === "loading" && <p className="route-loading" role="status">{t("searching")}</p>}
+      {status === "loading" && <p className="m-0 text-muted text-[14px]" role="status">{t("searching")}</p>}
       {status in ERRORS && <Notice tone="error">{t(ERRORS[status as keyof typeof ERRORS])}</Notice>}
       {plan && status === "ready" && <RouteResult plan={plan} pref={pref} />}
-    </div>
+    </>
   );
 }

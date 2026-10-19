@@ -2,7 +2,6 @@ import { LngLatBounds, Map as MlMap, Marker, NavigationControl, setWorkerUrl, ty
 // MapLibre resolves its web worker relative to its own bundle at runtime, which Vite can't
 // follow; bundle the worker explicitly (see also optimizeDeps in vite.config.ts).
 import mapWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
-import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
 import type { Bike, Station } from "@shared/types";
 import { TRICITY_CENTER, type LatLon } from "@/lib/geo";
@@ -10,7 +9,6 @@ import type { TripPlan } from "@/lib/planner";
 import type { CameraRequest, SheetState } from "@/store/ui";
 import { isPhone } from "@/lib/viewport";
 import { addLayers, bikesData, routeData, stationsData, toLngLat } from "./layers";
-import "./map.css";
 
 setWorkerUrl(mapWorkerUrl);
 
@@ -22,7 +20,7 @@ const PANEL_OFFSET = 16;
 const PANEL_WIDTH = 412;
 const PANEL_GAP = 40;
 const DESKTOP_PANEL_EDGE = PANEL_OFFSET + PANEL_WIDTH + PANEL_GAP;
-const PHONE_HALF_SHEET = 0.64; // matches .sheet max-height on phones
+const PHONE_HALF_SHEET = 0.64; // matches the sheet's max-height on phones (Sheet.tsx)
 const PHONE_PEEK_SHEET = 150;
 
 export type MarkerKind = "from" | "to" | "pickup" | "dropoff" | "bike" | "nearby";
@@ -162,5 +160,5 @@ export function MapView(props: Props) {
     }
   }, [props.camera]);
 
-  return <div ref={container} className="map" />;
+  return <div ref={container} className="absolute inset-0" />;
 }

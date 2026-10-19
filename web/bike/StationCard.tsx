@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useAllBikes, useStationsData } from "@/api";
 import { useI18n } from "@/i18n";
 import { useBikeStore } from "@/store/bike";
-import { Card, IconButton, Notice } from "@/ui";
+import { Actions, Card, IconButton, Notice, StopTitle } from "@/ui";
 import { BikeChips } from "./BikeChips";
 import { OpenInMevo } from "./OpenInMevo";
 import { useTrackBike } from "./actions";
@@ -31,23 +31,22 @@ export function StationCard() {
   const listed = bikes.filter((b) => b.available).length;
 
   return (
-    <Card className="station-card">
-      <header>
+    <Card>
+      <header className="flex justify-between gap-2.5 items-start">
         <div>
-          <span className="eyebrow">{t("station")}</span>
-          <h2 className="stop-name">{station.name}</h2>
-          <p className="stop-address">{station.address}</p>
+          <span className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-muted">{t("station")}</span>
+          <StopTitle as="h2" name={station.name} address={station.address} />
         </div>
         <IconButton icon="close" label={t("close")} onClick={onClose} />
       </header>
-      <p className="muted small">
+      <p className="m-0 text-muted text-[13px]">
         {t("stationBikes", { n: total })} · {dockedUpdated ? t("numbersAt", { time: clock(dockedUpdated) }) : t("numbersLoading")}
       </p>
       {dockedUpdated && listed !== total && <Notice tone="warn">{t("numbersOutOfDate", { listed, total })}</Notice>}
       <BikeChips bikes={bikes} onPick={onPick} selected={selectedNumber} />
-      <div className="actions">
+      <Actions>
         <OpenInMevo target={{ kind: "station", id: station.id }} />
-      </div>
+      </Actions>
     </Card>
   );
 }

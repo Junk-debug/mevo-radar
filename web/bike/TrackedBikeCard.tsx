@@ -5,9 +5,13 @@ import { useI18n } from "@/i18n";
 import { formatDistance, haversine } from "@/lib/geo";
 import { stationPos, walkingDirectionsUrl } from "@/lib/planner";
 import { useBikeStore } from "@/store/bike";
-import { Button, Card, Pill } from "@/ui";
+import { Actions, Button, Card, cx, Pill } from "@/ui";
 import { OpenInMevo } from "./OpenInMevo";
 import { useTrackedBike } from "./actions";
+
+const DT = "text-[12px] font-semibold uppercase tracking-[0.06em] text-muted pt-0.5";
+const DD = "m-0 min-w-0 tabular-nums";
+const NOTE = "block text-muted text-[12.5px]";
 
 function nearestStation(stations: Station[], b: Bike) {
   let best: { station: Station; distance: number } | null = null;
@@ -53,38 +57,38 @@ export function TrackedBikeCard() {
   };
 
   return (
-    <Card className="tracked" live>
+    <Card live>
       <Pill tone={status.tone}>{status.text}</Pill>
-      <h2 className="bike-number">{where?.number ?? number}</h2>
+      <h2 className="m-0 font-mono font-extrabold text-[34px]/none tracking-[0.02em]">{where?.number ?? number}</h2>
       {bike ? (
-        <dl className="facts">
-          <dt>{t("type")}</dt>
-          <dd>{t(bike.type)}</dd>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-[7px] m-0">
+          <dt className={DT}>{t("type")}</dt>
+          <dd className={DD}>{t(bike.type)}</dd>
           {bike.type === "ebike" && bike.battery != null && (
             <>
-              <dt>{t("battery")}</dt>
-              <dd className="battery">
-                <span className="gauge"><i style={{ width: `${bike.battery}%` }} /></span>
+              <dt className={DT}>{t("battery")}</dt>
+              <dd className={cx(DD, "flex items-center gap-2.5")}>
+                <span className="w-[90px] h-[9px] rounded-[5px] bg-line overflow-hidden"><i className="block h-full bg-ebike rounded-[5px]" style={{ width: `${bike.battery}%` }} /></span>
                 {bike.battery}%{bike.range != null && ` · ~${Math.round(bike.range / 1000)} km`}
               </dd>
             </>
           )}
           {station ? (
             <>
-              <dt>{t("station")}</dt>
-              <dd>
+              <dt className={DT}>{t("station")}</dt>
+              <dd className={DD}>
                 <b>{station.name}</b>
-                <small>{station.address}</small>
+                <small className={NOTE}>{station.address}</small>
               </dd>
             </>
           ) : (
             <>
-              <dt>{t("outsideStation")}</dt>
-              <dd>
+              <dt className={DT}>{t("outsideStation")}</dt>
+              <dd className={DD}>
                 {near && (
                   <>
                     {t("nearStation")}: <b>{near.station.name}</b>, {formatDistance(near.distance)}
-                    <small>{near.station.address}</small>
+                    <small className={NOTE}>{near.station.address}</small>
                   </>
                 )}
               </dd>
@@ -92,9 +96,9 @@ export function TrackedBikeCard() {
           )}
         </dl>
       ) : (
-        dockedLoaded && <p className="muted">{t("notFoundHint")}</p>
+        dockedLoaded && <p className="text-muted">{t("notFoundHint")}</p>
       )}
-      <div className="actions">
+      <Actions>
         {bike && (
           <OpenInMevo target={bike.appId ? { kind: "vehicle", id: bike.appId } : bike.stationId ? { kind: "station", id: bike.stationId } : { kind: "app" }} />
         )}
@@ -105,7 +109,7 @@ export function TrackedBikeCard() {
         )}
         <Button variant="ghost" onClick={copy}>{copied ? t("copied") : t("copyNumber")}</Button>
         <Button variant="ghost" onClick={onUntrack}>{t("stopTracking")}</Button>
-      </div>
+      </Actions>
     </Card>
   );
 }

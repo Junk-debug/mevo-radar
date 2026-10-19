@@ -5,9 +5,7 @@ import { listenToBikeLinks } from "@/bike/deepLink";
 import { I18nProvider } from "@/i18n";
 import { useLocationStore } from "@/store/location";
 import { App } from "./App";
-import "@/styles/base.css";
-import "@/styles/tokens.css";
-import "@/ui/ui.css";
+import "@/styles/index.css";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 10_000, retry: 2, refetchOnWindowFocus: true } },

@@ -112,6 +112,9 @@ export const pl = {
   fullestStations: "Najwięcej rowerów na stacji",
   statsSource: "Statystyki systemu: MEVO, odświeżane co 30 s. Flota: nasze dane z mapy.",
   statsUnavailable: "Nie udało się pobrać statystyk MEVO.",
+
+  panelCrashed: "Coś poszło nie tak w tym panelu. Mapa nadal działa.",
+  reload: "Odśwież stronę",
 };
 
 export type Dict = typeof pl;
