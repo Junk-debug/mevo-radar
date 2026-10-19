@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n";
 import { Notice } from "@/ui";
 import "./live.css";
 
-const BUCKETS = [0, 20, 40, 60, 80] as const; // battery % bucket starts
+const BATTERY_BUCKET_STARTS = [0, 20, 40, 60, 80] as const;
 
 function Tile({ label, value, note, tone }: { label: string; value: string; note?: string; tone?: "up" | "down" }) {
   return (
@@ -33,7 +33,7 @@ export function LivePanel() {
   const fleet = useMemo(() => {
     const available = bikes.filter((b) => b.available);
     const ebikes = available.filter((b) => b.type === "ebike" && b.battery != null);
-    const buckets = BUCKETS.map((from) => ebikes.filter((b) => b.battery! >= from && (from === 80 ? b.battery! <= 100 : b.battery! < from + 20)).length);
+    const buckets = BATTERY_BUCKET_STARTS.map((from) => ebikes.filter((b) => b.battery! >= from && (from === 80 ? b.battery! <= 100 : b.battery! < from + 20)).length);
     const active = stations.filter((s) => s.active);
     return {
       available: available.length,
@@ -41,9 +41,9 @@ export function LivePanel() {
       classic: available.filter((b) => b.type === "bike").length,
       avgBattery: ebikes.length ? Math.round(ebikes.reduce((s, b) => s + b.battery!, 0) / ebikes.length) : null,
       buckets,
-      empty: active.filter((s) => s.bikes + s.ebikes === 0).length,
+      empty: active.filter((s) => s.classicBikes + s.ebikes === 0).length,
       activeStations: active.length,
-      fullest: [...active].sort((a, b) => b.bikes + b.ebikes - (a.bikes + a.ebikes)).slice(0, 5),
+      fullest: [...active].sort((a, b) => b.classicBikes + b.ebikes - (a.classicBikes + a.ebikes)).slice(0, 5),
     };
   }, [bikes, stations]);
 
@@ -90,7 +90,7 @@ export function LivePanel() {
         <figcaption>{t("batteryDistribution")}</figcaption>
         <div className="hist-bars" role="list">
           {fleet.buckets.map((count, i) => {
-            const range = `${BUCKETS[i]}–${BUCKETS[i] + 20}%`;
+            const range = `${BATTERY_BUCKET_STARTS[i]}–${BATTERY_BUCKET_STARTS[i] + 20}%`;
             return (
               <div className="hist-col" key={i} role="listitem" title={`${range}: ${num(count)}`} aria-label={`${range}: ${num(count)}`}>
                 <span className="hist-count">{num(count)}</span>
@@ -109,7 +109,7 @@ export function LivePanel() {
             <button type="button" onClick={() => onStation(s.id)}>
               <span className="rank-name">{s.name}</span>
               <span className="rank-address">{s.address}</span>
-              <span className="rank-count">{num(s.bikes + s.ebikes)}</span>
+              <span className="rank-count">{num(s.classicBikes + s.ebikes)}</span>
             </button>
           </li>
         ))}

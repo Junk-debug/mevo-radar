@@ -5,7 +5,10 @@ import { defineConfig } from "vite";
 
 // `npm run dev` runs the web app and the Worker (/api/*) together via the Cloudflare plugin.
 export default defineConfig({
-  plugins: [react(), cloudflare()],
+  // The web app (index.html, public/) lives in web/; the build output stays at the project root.
+  root: "web",
+  build: { outDir: "../dist", emptyOutDir: true },
+  plugins: [react(), cloudflare({ configPath: "../wrangler.jsonc" })],
   resolve: {
     alias: {
       "@/": fileURLToPath(new URL("./web/", import.meta.url)),

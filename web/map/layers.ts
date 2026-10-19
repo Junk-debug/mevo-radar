@@ -2,7 +2,7 @@ import type { FeatureCollection } from "geojson";
 import type { Map as MlMap } from "maplibre-gl";
 import type { Bike, Station } from "@shared/types";
 import type { LatLon } from "@/lib/geo";
-import { LOW_COUNT, type TripPlan } from "@/lib/planner";
+import { LOW_STOCK_LIMIT, type TripPlan } from "@/lib/planner";
 
 export const toLngLat = ([lat, lon]: LatLon): [number, number] => [lon, lat];
 
@@ -13,11 +13,11 @@ export const stationsData = (stations: Station[]) =>
     stations
       .filter((s) => s.active)
       .map((s) => {
-        const total = s.bikes + s.ebikes;
+        const total = s.classicBikes + s.ebikes;
         return {
           type: "Feature",
           geometry: { type: "Point", coordinates: [s.lon, s.lat] },
-          properties: { id: s.id, total, level: total === 0 ? 0 : total <= LOW_COUNT ? 1 : 2 },
+          properties: { id: s.id, total, level: total === 0 ? 0 : total <= LOW_STOCK_LIMIT ? 1 : 2 },
         };
       }),
   );

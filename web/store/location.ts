@@ -15,14 +15,14 @@ interface LocationState {
 
 const HINT_MS = 5000;
 let watchId: number | null = null;
-let optedIn = false; // granted now or on an earlier visit
+let accessGranted = false;
 
 // Never prompts on page load: only locate() (a user tap) shows the browser prompt.
 // Tracking pauses while the tab is hidden to save battery.
 export const useLocationStore = create<LocationState>()((set, get) => {
   const onPosition = (p: GeolocationPosition) => set({ pos: [p.coords.latitude, p.coords.longitude], status: "ok" });
   const onError = (e: GeolocationPositionError) => {
-    if (e.code === e.PERMISSION_DENIED) optedIn = false;
+    if (e.code === e.PERMISSION_DENIED) accessGranted = false;
     set({ status: e.code === e.PERMISSION_DENIED ? "denied" : "unavailable" });
   };
   const startWatch = () => {
@@ -48,12 +48,12 @@ export const useLocationStore = create<LocationState>()((set, get) => {
         ?.query({ name: "geolocation" as PermissionName })
         .then((p) => {
           if (p.state === "granted") {
-            optedIn = true;
+            accessGranted = true;
             startWatch();
           } else if (p.state === "denied") set({ status: "denied" });
         })
         .catch(() => {});
-      document.addEventListener("visibilitychange", () => (document.visibilityState === "visible" ? optedIn && startWatch() : stopWatch()));
+      document.addEventListener("visibilitychange", () => (document.visibilityState === "visible" ? accessGranted && startWatch() : stopWatch()));
     },
 
     locate: () => {
@@ -68,7 +68,7 @@ export const useLocationStore = create<LocationState>()((set, get) => {
         navigator.geolocation.getCurrentPosition(
           (p) => {
             onPosition(p);
-            optedIn = true;
+            accessGranted = true;
             startWatch();
             resolve([p.coords.latitude, p.coords.longitude]);
           },

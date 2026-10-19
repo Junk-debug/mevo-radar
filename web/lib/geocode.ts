@@ -1,8 +1,8 @@
 import type { LatLon } from "./geo";
 
 export interface Place {
-  label: string; // what goes into the input: a place's name, or "street number"
-  detail: string; // second line in suggestions: address / district / city
+  label: string;
+  detail: string;
   coords: LatLon;
 }
 

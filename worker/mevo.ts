@@ -1,7 +1,7 @@
 // GBFS (official) has stations and counts; frame numbers only come from the Urban Sharing
 // GraphQL API behind rowermevo.pl, which answers only requests with its Origin.
 
-import type { Bike, BikeType, Station, SystemStats } from "../shared/types";
+import type { Bike, BikeType, Station, StationsResponse, SystemStats } from "../shared/types";
 
 const GBFS = "https://gbfs.urbansharing.com/rowermevo.pl";
 const GRAPHQL = "https://core.urbansharing.com/public/api/v1/graphql";
@@ -82,7 +82,7 @@ async function stationFeeds() {
   return { info: info.data.stations, status: status.data.stations, updated: status.last_updated };
 }
 
-export async function fetchStations(): Promise<{ updated: number; stations: Station[] }> {
+export async function fetchStations(): Promise<StationsResponse> {
   const { info, status, updated } = await stationFeeds();
   const byId = new Map(status.map((s) => [s.station_id, s]));
   const stations = info.map((st): Station => {
@@ -95,9 +95,9 @@ export async function fetchStations(): Promise<{ updated: number; stations: Stat
       lat: st.lat,
       lon: st.lon,
       capacity: st.capacity ?? 0,
-      bikes: count("bike"),
+      classicBikes: count("bike"),
       ebikes: count("ebike"),
-      docks: s?.num_docks_available ?? 0,
+      freeDocks: s?.num_docks_available ?? 0,
       active: Boolean(s?.is_renting && s?.is_returning),
     };
   });

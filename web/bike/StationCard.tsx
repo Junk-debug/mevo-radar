@@ -12,7 +12,7 @@ const clock = (unix: number) => new Date(unix * 1000).toLocaleTimeString([], { h
 export function StationCard() {
   const { t } = useI18n();
   const stationId = useBikeStore((s) => s.stationId);
-  const selectedNumber = useBikeStore((s) => s.tracked);
+  const selectedNumber = useBikeStore((s) => s.trackedNumber);
   const { byId } = useStationsData();
   const { list, dockedUpdated } = useAllBikes();
   const onPick = useTrackBike();
@@ -27,7 +27,7 @@ export function StationCard() {
   const station = stationId ? byId.get(stationId) : undefined;
   if (!station) return null;
   // Counts are live (GBFS); the number list comes from the station scan, up to ~2 min old.
-  const total = station.bikes + station.ebikes;
+  const total = station.classicBikes + station.ebikes;
   const listed = bikes.filter((b) => b.available).length;
 
   return (

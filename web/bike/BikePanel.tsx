@@ -52,7 +52,7 @@ export function BikePanel() {
         <Button variant="primary" type="submit">{t("find")}</Button>
       </form>
 
-      <Button variant="outline" block icon="target" className="nearest" onClick={findNearest} disabled={nearby.loading}>
+      <Button variant="outline" fullWidth icon="target" className="nearest" onClick={findNearest} disabled={nearby.loading}>
         {nearby.loading ? t("findingNearest") : t("nearestBike")}
       </Button>
 

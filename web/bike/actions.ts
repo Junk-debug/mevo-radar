@@ -46,6 +46,6 @@ export function useFindNearest() {
  */
 export function useTrackedBike() {
   const { bikes, resolve } = useAllBikes();
-  const number = useBikeStore((s) => s.tracked);
+  const number = useBikeStore((s) => s.trackedNumber);
   return { number, bike: number ? (bikes.get(number) ?? bikes.get(resolve(number)) ?? null) : null };
 }

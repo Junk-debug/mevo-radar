@@ -16,7 +16,7 @@ UI languages: Polish (default for Polish browsers) and English. Unofficial — t
 One Cloudflare Worker serves both the built React app (static assets) and the `/api/*` routes — one domain, one deploy, no CORS.
 
 ```
-web/                browser app (Vite + React + TypeScript)
+web/                browser app (Vite root): index.html, public/ (favicon, PWA manifest, icons)
   main.tsx          entry: providers, global styles, startup (geolocation, bike #hash links)
   App.tsx           layout only
   route/ bike/ live/  one folder per tab: its panel, cards, actions and CSS
@@ -38,7 +38,6 @@ web/                browser app (Vite + React + TypeScript)
   styles/           tokens.css (theme), base.css
 worker/             Cloudflare Worker: index.ts (routes, cache, cron), mevo.ts (upstream sources)
 shared/types.ts     API types used by both web/ and worker/
-public/             favicon, PWA manifest and icons (rendered from the brand mark SVG with sharp)
 ```
 
 Imports inside web/ use the aliases `@/…` (web/) and `@shared/…`; same-folder imports stay `./…`.
@@ -91,7 +90,7 @@ Conventions:
 - Live at https://mevoradar.pl (also `www.` and https://mevo-radar.maks-naumovich2349.workers.dev). Domain registered at home.pl, DNS on Cloudflare (nameservers `angela`/`duke.ns.cloudflare.com`).
 - `wrangler.jsonc` holds the KV namespace id and the custom-domain routes — not secrets, keep them committed.
 - Pushes to `main` deploy via `.github/workflows/deploy.yml`; it needs repository secrets `CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers") and `CLOUDFLARE_ACCOUNT_ID`. Each run is recorded as a `production` deployment (URL on the run page and in the repo sidebar) and writes a job summary with the live URLs, commit and Worker version.
-- Manual deploy: `npx wrangler login` once, then `npm run deploy`.
+- Manual deploy: `npx wrangler login` once, then `npm run deploy`. Deploys use the config the build writes (`dist/mevo_radar/wrangler.json`), because Vite's root is `web/`.
 - Free-plan limits that shape the design: 1000 KV writes/day (hence cron every 2 min, 720/day), 50 subrequests per invocation (a full station scan uses ~21).
 
 ## Gotchas

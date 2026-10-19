@@ -7,7 +7,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy --config dist/mevo_radar/wrangler.json"
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.1",

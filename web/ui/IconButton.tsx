@@ -3,7 +3,6 @@ import { Icon, type IconName } from "./Icon";
 
 interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   icon: IconName;
-  /** Accessible name and tooltip. */
   label: string;
   variant?: "plain" | "round" | "map";
 }

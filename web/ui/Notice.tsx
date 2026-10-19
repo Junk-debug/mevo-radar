@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 interface Props {
   tone: "error" | "warn" | "tip";
   children: ReactNode;
-  /** Makes the whole notice clickable. */
   onClick?: () => void;
 }
 

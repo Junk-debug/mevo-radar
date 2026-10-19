@@ -5,7 +5,7 @@ import { useUi } from "@/store/ui";
 export function listenToBikeLinks() {
   window.addEventListener("hashchange", () => {
     const number = numberFromHash();
-    if (!number || number === useBikeStore.getState().tracked) return;
+    if (!number || number === useBikeStore.getState().trackedNumber) return;
     useBikeStore.getState().setTracked(number);
     useUi.getState().showTab("bike");
   });

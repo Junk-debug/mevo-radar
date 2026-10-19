@@ -6,8 +6,7 @@ export type ButtonVariant = "primary" | "solid" | "ghost" | "accent" | "outline"
 interface Common {
   variant?: ButtonVariant;
   icon?: IconName;
-  /** Full width. */
-  block?: boolean;
+  fullWidth?: boolean;
   className?: string;
   children: ReactNode;
 }
@@ -15,8 +14,8 @@ interface Common {
 type AsButton = Common & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & { href?: undefined };
 type AsLink = Common & { href: string; external?: boolean; onClick?: () => void };
 
-const classes = ({ variant = "solid", block, className }: Common) =>
-  `btn btn--${variant}${block ? " btn--block" : ""}${className ? ` ${className}` : ""}`;
+const classes = ({ variant = "solid", fullWidth, className }: Common) =>
+  `btn btn--${variant}${fullWidth ? " btn--full-width" : ""}${className ? ` ${className}` : ""}`;
 
 /** A button, or a link styled as one when `href` is given. */
 export function Button(props: AsButton | AsLink) {
@@ -34,7 +33,7 @@ export function Button(props: AsButton | AsLink) {
       </a>
     );
   }
-  const { variant: _v, icon: _i, block: _b, className: _cn, children: _c, type = "button", ...rest } = props;
+  const { variant: _v, icon: _i, fullWidth: _f, className: _cn, children: _c, type = "button", ...rest } = props;
   return (
     <button {...rest} type={type} className={classes(props)}>
       {content}

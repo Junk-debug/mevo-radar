@@ -18,7 +18,10 @@ const STYLES = {
   light: "https://tiles.openfreemap.org/styles/positron",
   dark: "https://tiles.openfreemap.org/styles/dark",
 };
-const DESKTOP_PANEL_EDGE = 16 + 412 + 40; // panel offset + width + breathing room
+const PANEL_OFFSET = 16;
+const PANEL_WIDTH = 412;
+const PANEL_GAP = 40;
+const DESKTOP_PANEL_EDGE = PANEL_OFFSET + PANEL_WIDTH + PANEL_GAP;
 const PHONE_HALF_SHEET = 0.64; // matches .sheet max-height on phones
 const PHONE_PEEK_SHEET = 150;
 

@@ -20,7 +20,7 @@ function useStatusLine() {
   const { t } = useI18n();
   const { stations, error } = useStationsData();
   const bikes = useAllBikes();
-  const total = stations.reduce((n, s) => n + s.bikes + s.ebikes, 0) + bikes.freeBikes.length;
+  const total = stations.reduce((n, s) => n + s.classicBikes + s.ebikes, 0) + bikes.freeBikes.length;
   return {
     online: !error && !bikes.error,
     status: stations.length ? t("stationsCount", { s: stations.length, b: total }) : "…",

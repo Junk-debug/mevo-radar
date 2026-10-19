@@ -10,8 +10,9 @@ interface Env {
 }
 
 const DOCKED_KEY = "docked-bikes";
-const DOCKED_STALE_AFTER = 150; // s — the cron refreshes every 120 s; rescan on demand if it lagged
-let scanStartedAt = 0; // per isolate, keeps concurrent requests from starting parallel scans
+const DOCKED_STALE_AFTER_SECONDS = 150; // the cron refreshes every 120 s; rescan on demand if it lagged
+const MIN_SECONDS_BETWEEN_SCANS = 60;
+let lastScanStartedAt = 0; // per isolate: stops concurrent requests from starting parallel scans
 const now = () => Math.floor(Date.now() / 1000);
 
 function json(body: unknown, maxAge: number, status = 200): Response {
@@ -33,7 +34,7 @@ async function cached(request: Request, ctx: ExecutionContext, maxAge: number, l
 }
 
 async function scanDocked(env: Env): Promise<BikesResponse> {
-  scanStartedAt = now();
+  lastScanStartedAt = now();
   const body: BikesResponse = { updated: now(), bikes: await fetchDockedBikes() };
   await env.MEVO_KV.put(DOCKED_KEY, JSON.stringify(body), { metadata: { updated: body.updated } });
   return body;
@@ -54,7 +55,7 @@ async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<R
       if (!stored) return json(await scanDocked(env), 30);
       // Serve what we have; if the cron lagged (or doesn't run, as in local dev), refresh in the background.
       const updated = metadata?.updated ?? 0;
-      if (now() - updated > DOCKED_STALE_AFTER && now() - scanStartedAt > 60) ctx.waitUntil(scanDocked(env).catch(() => undefined));
+      if (now() - updated > DOCKED_STALE_AFTER_SECONDS && now() - lastScanStartedAt > MIN_SECONDS_BETWEEN_SCANS) ctx.waitUntil(scanDocked(env).catch(() => undefined));
       return new Response(stored, { headers: { "content-type": "application/json", "cache-control": "public, max-age=30" } });
     }
     default:

@@ -1,20 +1,20 @@
 // Walk → bike → walk. Stations are chosen by real walking distance, not straight-line
 // distance: the closest station on the map can be a long walk around rail lines or water.
 
-import type { Bike, BikeType, Station } from "@shared/types";
+import type { Bike, BikeType, Meters, Station } from "@shared/types";
 import { haversine, type LatLon } from "./geo";
 import { routeLeg, walkingDistances, type Leg } from "./routing";
 
 export type BikePreference = "any" | BikeType;
 
-const SEARCH_RADIUS = 3000;
+const SEARCH_RADIUS: Meters = 3000;
 const CANDIDATES = 5;
-export const LOW_COUNT = 2; // 1–2 bikes/docks left → warn
+export const LOW_STOCK_LIMIT = 2;
 
 export const stationPos = (s: { lat: number; lon: number }): LatLon => [s.lat, s.lon];
 
 export function bikesAt(s: Station, pref: BikePreference): number {
-  return pref === "ebike" ? s.ebikes : pref === "bike" ? s.bikes : s.bikes + s.ebikes;
+  return pref === "ebike" ? s.ebikes : pref === "bike" ? s.classicBikes : s.classicBikes + s.ebikes;
 }
 
 const matches = (b: Bike, pref: BikePreference) => b.available && (pref === "any" || b.type === pref);
@@ -23,7 +23,7 @@ async function bestStation(
   stations: Station[],
   near: LatLon,
   usable: (s: Station) => boolean,
-): Promise<{ station: Station; walk: number } | null> {
+): Promise<{ station: Station; walkDistance: Meters } | null> {
   const candidates = stations
     .filter((s) => s.active && usable(s))
     .map((s) => ({ s, d: haversine(near, stationPos(s)) }))
@@ -33,11 +33,11 @@ async function bestStation(
   if (!candidates.length) return null;
   const walks = await walkingDistances(near, candidates.map((c) => stationPos(c.s)));
   const i = walks.indexOf(Math.min(...walks));
-  return { station: candidates[i].s, walk: walks[i] };
+  return { station: candidates[i].s, walkDistance: walks[i] };
 }
 
 function nearestFreeBike(bikes: Bike[], near: LatLon, pref: BikePreference) {
-  let best: { bike: Bike; distance: number } | null = null;
+  let best: { bike: Bike; distance: Meters } | null = null;
   for (const bike of bikes) {
     if (bike.stationId || !matches(bike, pref)) continue;
     const distance = haversine(near, [bike.lat, bike.lon]);
@@ -57,7 +57,7 @@ export interface TripPlan {
   dropoff: Station;
   legs: [Leg, Leg, Leg];
   /** A free-floating bike closer than the pickup station, if any. */
-  closerFreeBike: { bike: Bike; distance: number } | null;
+  closerFreeBike: { bike: Bike; distance: Meters } | null;
   /** Suggested when the drop-off station is almost full. */
   dropoffAlternative: Station | null;
 }
@@ -73,7 +73,7 @@ export async function planTrip(
 ): Promise<TripPlan | PlanError> {
   const [pickStation, drop] = await Promise.all([
     bestStation(stations, from, (s) => bikesAt(s, pref) > 0),
-    bestStation(stations, to, (s) => s.docks > 0),
+    bestStation(stations, to, (s) => s.freeDocks > 0),
   ]);
   const freeBike = nearestFreeBike(bikes, from, pref);
   if (!drop) return "noDocks";
@@ -101,9 +101,9 @@ export async function planTrip(
     pickup.kind === "station" && freeBike && freeBike.distance < legs[0].distance ? freeBike : null;
 
   const dropoffAlternative =
-    drop.station.docks <= LOW_COUNT
+    drop.station.freeDocks <= LOW_STOCK_LIMIT
       ? (stations
-          .filter((s) => s.active && s.id !== drop.station.id && s.docks > LOW_COUNT)
+          .filter((s) => s.active && s.id !== drop.station.id && s.freeDocks > LOW_STOCK_LIMIT)
           .map((s) => ({ s, d: haversine(to, stationPos(s)) }))
           .sort((a, b) => a.d - b.d)[0]?.s ?? null)
       : null;

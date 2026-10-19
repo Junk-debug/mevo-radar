@@ -4,7 +4,7 @@ import { OpenInMevo } from "@/bike/OpenInMevo";
 import { useTrackBike } from "@/bike/actions";
 import { useI18n } from "@/i18n";
 import { formatDistance, formatDuration } from "@/lib/geo";
-import { bikesAt, googleMapsUrl, LOW_COUNT, type BikePreference, type TripPlan } from "@/lib/planner";
+import { bikesAt, googleMapsUrl, LOW_STOCK_LIMIT, type BikePreference, type TripPlan } from "@/lib/planner";
 import { Button, Card, Notice } from "@/ui";
 
 interface Props {
@@ -20,8 +20,8 @@ function StationCounts({ station }: { station: Station }) {
   return (
     <span className="counts">
       <span><b>{station.ebikes}</b> {t("ebikesShort")}</span>
-      <span><b>{station.bikes}</b> {t("bikesShort")}</span>
-      <span><b>{station.docks}</b> {t("freeDocks")}</span>
+      <span><b>{station.classicBikes}</b> {t("bikesShort")}</span>
+      <span><b>{station.freeDocks}</b> {t("freeDocks")}</span>
     </span>
   );
 }
@@ -94,7 +94,7 @@ export function RouteResult({ plan, pref }: Props) {
             <strong className="pickup-title">{t("pickupAt", { name: pickup.station.name })}</strong>
             <span className="muted small">{t("pickupMeta", { min: walkToBike, n: pickupCount ?? 0 })}</span>
             {pickup.bikes.length > 0 && <BikeChips bikes={pickup.bikes} onPick={onBike} />}
-            {pickupCount !== null && pickupCount <= LOW_COUNT && <Notice tone="warn">{t("lowBikes", { n: pickupCount })}</Notice>}
+            {pickupCount !== null && pickupCount <= LOW_STOCK_LIMIT && <Notice tone="warn">{t("lowBikes", { n: pickupCount })}</Notice>}
           </>
         ) : (
           <>
@@ -119,13 +119,13 @@ export function RouteResult({ plan, pref }: Props) {
       <div className="dropoff">
         <span>
           <strong>{t("dropoffAt", { name: dropoff.name })}</strong>
-          <span className="muted small"> · {t("dropoffMeta", { n: dropoff.docks })}</span>
+          <span className="muted small"> · {t("dropoffMeta", { n: dropoff.freeDocks })}</span>
         </span>
-        {dropoff.docks <= LOW_COUNT && (
+        {dropoff.freeDocks <= LOW_STOCK_LIMIT && (
           <Notice tone="warn">
             {plan.dropoffAlternative
-              ? t("lowDocks", { n: dropoff.docks, alt: plan.dropoffAlternative.name, docks: plan.dropoffAlternative.docks })
-              : t("lowDocksNoAlt", { n: dropoff.docks })}
+              ? t("lowDocks", { n: dropoff.freeDocks, alt: plan.dropoffAlternative.name, docks: plan.dropoffAlternative.freeDocks })
+              : t("lowDocksNoAlt", { n: dropoff.freeDocks })}
           </Notice>
         )}
       </div>

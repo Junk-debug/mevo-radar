@@ -2,9 +2,9 @@ import { useRef, type MouseEvent, type PointerEvent, type RefObject } from "reac
 import type { SheetState } from "@/store/ui";
 import { isPhone } from "./viewport";
 
-const START = 6; // px of movement before a press becomes a drag (so taps on tabs still work)
-const STEP = 60; // px to move one step (peek ↔ half ↔ full)
-const JUMP = 280; // px to skip a step (full → peek, peek → full)
+const DRAG_THRESHOLD_PX = 6; // so taps on tabs still work
+const SNAP_DISTANCE_PX = 60;
+const SKIP_DISTANCE_PX = 280; // full → peek, peek → full
 
 /** Swipe the phone sheet by its top area; it follows the finger and snaps on release. */
 export function useSheetDrag(sheet: RefObject<HTMLElement | null>, state: SheetState, setState: (s: SheetState) => void) {
@@ -21,7 +21,7 @@ export function useSheetDrag(sheet: RefObject<HTMLElement | null>, state: SheetS
     const el = sheet.current;
     if (!d || d.id !== e.pointerId || !el) return;
     const dy = e.clientY - d.y;
-    if (!d.active && Math.abs(dy) > START) {
+    if (!d.active && Math.abs(dy) > DRAG_THRESHOLD_PX) {
       d.active = true;
       try {
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -46,10 +46,10 @@ export function useSheetDrag(sheet: RefObject<HTMLElement | null>, state: SheetS
       el.style.maxHeight = "";
       el.classList.remove("dragging");
     }
-    if (dy > JUMP && state === "full") setState("peek");
-    else if (dy > STEP) setState(state === "full" ? "half" : "peek");
-    else if (dy < -JUMP && state === "peek") setState("full");
-    else if (dy < -STEP) setState(state === "peek" ? "half" : "full");
+    if (dy > SKIP_DISTANCE_PX && state === "full") setState("peek");
+    else if (dy > SNAP_DISTANCE_PX) setState(state === "full" ? "half" : "peek");
+    else if (dy < -SKIP_DISTANCE_PX && state === "peek") setState("full");
+    else if (dy < -SNAP_DISTANCE_PX) setState(state === "peek" ? "half" : "full");
     justDragged.current = true;
     setTimeout(() => (justDragged.current = false), 0);
   };

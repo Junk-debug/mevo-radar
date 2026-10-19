@@ -2,6 +2,11 @@
 
 export type BikeType = "bike" | "ebike";
 
+export type Meters = number;
+export type Seconds = number;
+export type UnixSeconds = number;
+export type Percent = number;
+
 export interface Station {
   id: string;
   name: string;
@@ -9,9 +14,9 @@ export interface Station {
   lat: number;
   lon: number;
   capacity: number;
-  bikes: number; // regular bikes available
-  ebikes: number; // e-bikes available
-  docks: number; // free parking spots
+  classicBikes: number;
+  ebikes: number;
+  freeDocks: number;
   active: boolean;
 }
 
@@ -19,8 +24,8 @@ export interface Bike {
   number: string; // as printed on the frame, e.g. "e4937" or "0366"
   type: BikeType;
   available: boolean;
-  battery: number | null; // percent, e-bikes only
-  range: number | null; // metres
+  battery: Percent | null; // e-bikes only
+  range: Meters | null;
   lat: number;
   lon: number;
   stationId: string | null; // null = parked outside a station
@@ -28,18 +33,18 @@ export interface Bike {
 }
 
 export interface StationsResponse {
-  updated: number; // unix seconds
+  updated: UnixSeconds;
   stations: Station[];
 }
 
 export interface BikesResponse {
-  updated: number;
+  updated: UnixSeconds;
   bikes: Bike[];
 }
 
 /** System-wide numbers, the same ones rowermevo.pl shows on its live page. */
 export interface SystemStats {
-  updated: number;
+  updated: UnixSeconds;
   activeTrips: number;
   tripsToday: number;
   tripsYesterday: number;
@@ -49,6 +54,6 @@ export interface SystemStats {
   recordTrips: number;
   recordUsers: number;
   recordUsersDate: string | null; // YYYY-MM-DD
-  medianDurationToday: number; // seconds
-  medianDurationThisYear: number; // seconds
+  medianDurationToday: Seconds;
+  medianDurationThisYear: Seconds;
 }

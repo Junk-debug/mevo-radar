@@ -6,7 +6,7 @@ export type Tab = "route" | "bike" | "live";
 export type SheetState = "peek" | "half" | "full";
 
 export interface CameraRequest {
-  key: number; // a new key re-runs an otherwise identical request
+  requestedAt: number;
   center?: LatLon;
   zoom?: number;
   bounds?: LatLon[];
@@ -32,6 +32,6 @@ export const useUi = create<UiState>()((set) => ({
   showTab: (tab) => set((s) => ({ tab, sheet: opened(s.sheet) })),
   setSheet: (sheet) => set({ sheet }),
   openSheet: () => set((s) => ({ sheet: opened(s.sheet) })),
-  focusOn: (center, zoom = 16.5) => set({ camera: { key: Date.now(), center, zoom } }),
-  fit: (bounds) => set({ camera: { key: Date.now(), bounds } }),
+  focusOn: (center, zoom = 16.5) => set({ camera: { requestedAt: Date.now(), center, zoom } }),
+  fit: (bounds) => set({ camera: { requestedAt: Date.now(), bounds } }),
 }));

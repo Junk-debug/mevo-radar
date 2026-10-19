@@ -6,7 +6,6 @@ interface Props<T extends string> {
   size?: "md" | "sm";
 }
 
-/** A row of mutually exclusive choices. */
 export function Segmented<T extends string>({ options, value, onChange, label, size = "md" }: Props<T>) {
   return (
     <div className={`segmented segmented--${size}`} role="radiogroup" aria-label={label}>

@@ -35,7 +35,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+          # The build writes the deployable config (with the assets dir) next to the Worker bundle.
+          command: deploy --config dist/mevo_radar/wrangler.json
 
       - name: Summary
         env:

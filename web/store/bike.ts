@@ -10,8 +10,8 @@ export interface NearbyState {
 }
 
 interface BikeState {
-  /** Lower-case frame number of the followed bike; mirrored in the URL hash (`#e4937`). */
-  tracked: string | null;
+  /** Lower-case; mirrored in the URL hash (`#e4937`). */
+  trackedNumber: string | null;
   stationId: string | null;
   nearby: NearbyState;
   setTracked: (number: string | null) => void;
@@ -26,21 +26,21 @@ export const numberFromHash = () => normalizeNumber(decodeURIComponent(location.
 export const useBikeStore = create<BikeState>()(
   persist(
     (set) => ({
-      tracked: numberFromHash(),
+      trackedNumber: numberFromHash(),
       stationId: null,
       nearby: NEARBY_IDLE,
-      setTracked: (tracked) => {
-        set({ tracked, nearby: NEARBY_IDLE });
-        history.replaceState(null, "", tracked ? `#${tracked}` : location.pathname);
+      setTracked: (trackedNumber) => {
+        set({ trackedNumber, nearby: NEARBY_IDLE });
+        history.replaceState(null, "", trackedNumber ? `#${trackedNumber}` : location.pathname);
       },
       selectStation: (stationId) => set({ stationId }),
       setNearby: (nearby) => set({ nearby }),
     }),
     {
       name: "mevo.bike",
-      partialize: (s) => ({ tracked: s.tracked }),
+      partialize: (s) => ({ trackedNumber: s.trackedNumber }),
       // A bike in the link wins over the one remembered from the last visit.
-      merge: (saved, current) => ({ ...current, tracked: current.tracked ?? (saved as { tracked?: string | null })?.tracked ?? null }),
+      merge: (saved, current) => ({ ...current, trackedNumber: current.trackedNumber ?? (saved as { trackedNumber?: string | null })?.trackedNumber ?? null }),
     },
   ),
 );
