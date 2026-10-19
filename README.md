@@ -2,7 +2,7 @@
 
 **[mevoradar.pl](https://mevoradar.pl)** — an unofficial companion for [MEVO](https://rowermevo.pl), the city bike-share of Gdańsk, Gdynia and Sopot.
 
-- **Route planner (Trasa).** Enter a start and a destination and get a walk → bike → walk trip: the pickup and drop-off stations are chosen by real walking distance, with bike availability, free docks and a link to open the route in Google Maps.
+- **Route planner (Trasa).** Type where you're going — the start defaults to your location — and the walk → bike → walk trip appears on its own: total time and arrival, where to pick up a bike (with the bikes waiting there), where to leave it, and links to the MEVO app and Google Maps. Recent places and picking a point on the map are one tap away.
 - **Bike finder (Rower).** Type the number from a bike's frame (`e4937`, `0366`) and see where it is right now — at a station or parked anywhere — with its battery level. Tracking survives reloads, and `mevoradar.pl/#e4937` links straight to a bike.
 
 - **Live (Na żywo).** How many people are riding right now, trips today, records and the year so far — plus the fleet at this moment: available bikes, average e-bike battery, empty and fullest stations.

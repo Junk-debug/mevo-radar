@@ -1,10 +1,5 @@
-// Upstream MEVO data sources.
-//
-// - GBFS (official open data): stations and their counts.
-// - Urban Sharing GraphQL (what rowermevo.pl itself uses): bikes with frame numbers.
-//   It only accepts requests that look like they come from rowermevo.pl, hence the Origin header.
-//   `dockGroupVehicles` has no "all stations" variant, so docked bikes are fetched by batching
-//   many aliased per-station fields into one query.
+// GBFS (official) has stations and counts; frame numbers only come from the Urban Sharing
+// GraphQL API behind rowermevo.pl, which answers only requests with its Origin.
 
 import type { Bike, BikeType, Station, SystemStats } from "../shared/types";
 

@@ -1,0 +1,50 @@
+/* Baltic transit ticket: deep navy ink, MEVO red for the ride, station codes and frame
+   numbers in mono like stamped plates. */
+:root {
+  --bg: #eef2f6;
+  --surface: #ffffff;
+  --surface-2: #f3f6f9;
+  --ink: #0d1b2a;
+  --muted: #5d6c7e;
+  --line: #dde4ec;
+  --accent: #e2001a;
+  --accent-ink: #ffffff;
+  --ok: #0f9d6b;
+  --low: #d99a00;
+  --gone: #c2263a;
+  --ebike: #0b8f8a;
+  --bike: #3256d6;
+  --walk: #0d1b2a;
+  --me: #1a73e8;
+  --shadow: 0 18px 50px rgb(13 27 42 / 0.16), 0 2px 6px rgb(13 27 42 / 0.08);
+
+  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --font-body: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  --r-lg: 18px;
+  --r-md: 12px;
+  --r-sm: 8px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b121a;
+    --surface: #131c27;
+    --surface-2: #1a2532;
+    --ink: #e8eef5;
+    --muted: #93a3b5;
+    --line: #273445;
+    --accent: #ff3b50;
+    --ok: #34d39d;
+    --low: #f2c14e;
+    --gone: #ff6b7d;
+    --ebike: #3fd0c8;
+    --bike: #84a0ff;
+    --walk: #d6e0ea;
+    --me: #4f9bff;
+    --shadow: 0 18px 50px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
+    color-scheme: dark;
+  }
+}

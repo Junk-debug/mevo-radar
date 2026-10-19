@@ -1,5 +1,3 @@
-// Nominatim (OpenStreetMap) search, limited to the Tricity area.
-
 import type { LatLon } from "./geo";
 
 export interface Place {
@@ -43,6 +41,8 @@ function describe(p: NominatimResult): { label: string; detail: string } {
   return { label: parts[0] ?? p.display_name, detail: parts.slice(1, 3).join(", ") };
 }
 
+const NOMINATIM = "https://nominatim.openstreetmap.org";
+
 export async function searchPlaces(query: string, lang: string, signal?: AbortSignal): Promise<Place[]> {
   const params = new URLSearchParams({
     format: "jsonv2",
@@ -54,8 +54,21 @@ export async function searchPlaces(query: string, lang: string, signal?: AbortSi
     bounded: "1",
     "accept-language": lang,
   });
-  const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, { signal });
+  const res = await fetch(`${NOMINATIM}/search?${params}`, { signal });
   if (!res.ok) throw new Error(`Nominatim ${res.status}`);
   const data: NominatimResult[] = await res.json();
   return data.map((p) => ({ ...describe(p), coords: [Number(p.lat), Number(p.lon)] }));
+}
+
+/** Street address of a point, e.g. for a spot picked on the map. */
+export async function reverseGeocode([lat, lon]: LatLon, lang: string): Promise<Place | null> {
+  const params = new URLSearchParams({ format: "jsonv2", lat: String(lat), lon: String(lon), zoom: "18", addressdetails: "1", "accept-language": lang });
+  try {
+    const res = await fetch(`${NOMINATIM}/reverse?${params}`);
+    if (!res.ok) return null;
+    const data: NominatimResult & { error?: string } = await res.json();
+    return data.error ? null : { ...describe(data), coords: [lat, lon] };
+  } catch {
+    return null;
+  }
 }

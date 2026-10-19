@@ -1,6 +1,5 @@
-// "Nearest bike": the closest places to pick one up, ranked by real walking distance.
-// A place is a station (all its bikes together) or a single bike parked outside a station,
-// so the results show different spots instead of three bikes at the same station.
+// A place is a whole station or one bike outside a station, so the results are three
+// different spots rather than three bikes at the same station.
 
 import type { Bike, Station } from "../../shared/types";
 import { haversine, type LatLon } from "./geo";
@@ -16,7 +15,7 @@ export interface NearbyPlace {
   pos: LatLon;
   station: Station | null;
   best: Bike; // the bike to take here: e-bike with the most battery, else a classic one
-  count: number; // usable bikes at this place
+  count: number;
   walk: number; // metres
   minutes: number;
 }

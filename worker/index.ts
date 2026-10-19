@@ -1,10 +1,5 @@
-// Cloudflare Worker: serves the built web app (static assets) and the /api/* routes.
-//
-//   GET /api/stations  stations with live counts (GBFS), cached 20 s
-//   GET /api/bikes     bikes parked outside stations, with frame numbers, cached 15 s
-//   GET /api/stats     system-wide numbers (riding now, trips today, records), cached 30 s
-//   GET /api/docked    bikes standing at stations, with frame numbers — refreshed by the
-//                      cron trigger every 2 minutes and kept in KV (a full scan is ~20 requests)
+// Serves the built web app and /api/*. Bikes at stations take ~20 upstream requests to list,
+// so a cron scans them every 2 minutes into KV instead of per visitor.
 
 import type { BikesResponse, StationsResponse } from "../shared/types";
 import { fetchDockedBikes, fetchFreeBikes, fetchStations, fetchSystemStats } from "./mevo";

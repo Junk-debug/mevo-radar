@@ -1,8 +1,5 @@
-// Trip planning: walk → pick up a bike → ride → leave it at a station → walk.
-//
-// Pickup: of the 5 nearest stations (≤ 3 km) that have a bike of the wanted type, the one with
-// the shortest real walking distance. A free-floating bike is offered instead when it is closer.
-// Drop-off: same rule, for stations with a free dock near the destination.
+// Walk → bike → walk. Stations are chosen by real walking distance, not straight-line
+// distance: the closest station on the map can be a long walk around rail lines or water.
 
 import type { Bike, BikeType, Station } from "../../shared/types";
 import { haversine, type LatLon } from "./geo";

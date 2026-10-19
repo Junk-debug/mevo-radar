@@ -1,11 +1,9 @@
-// Opening the official MEVO app. It has no https universal links, only the custom scheme
-// rowermevo:// (paths from GBFS rental_uris), so each platform needs its own fallback when the
-// app is not installed: an Android intent carries a Play Store fallback URL; on iOS we send the
-// user to the App Store if the page is still visible shortly after trying the scheme.
+// The MEVO app has no https universal links, only the rowermevo:// scheme, so each platform
+// needs its own fallback to the store when the app isn't installed.
 
 const ANDROID_PACKAGE = "com.urbansharing.citybike.gdansk";
-export const PLAY_STORE = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
-export const APP_STORE = "https://apps.apple.com/pl/app/rowermevo/id6452801246";
+const PLAY_STORE = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
+const APP_STORE = "https://apps.apple.com/pl/app/rowermevo/id6452801246";
 
 export type MevoTarget = { kind: "station"; id: string } | { kind: "vehicle"; id: string } | { kind: "app" };
 

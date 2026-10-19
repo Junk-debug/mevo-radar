@@ -16,26 +16,31 @@ UI languages: Polish (default for Polish browsers) and English. Unofficial — t
 One Cloudflare Worker serves both the built React app (static assets) and the `/api/*` routes — one domain, one deploy, no CORS.
 
 ```
-src/            React app (Vite + TypeScript)
-  App.tsx         tabs, route/tracking state, map wiring
-  api.ts          TanStack Query hooks for /api/*, bike-number lookup
-  i18n.tsx        PL/EN dictionaries
-  lib/planner.ts  station selection + trip planning
-  lib/routing.ts  OSRM (FOSSGIS) routing and walking-distance table
-  lib/geocode.ts  Nominatim search
-  lib/mevoApp.ts  deep links into the MEVO app (Android intent / iOS scheme + store fallback)
-  lib/useLocation.ts  user position: never prompts on load; silent if already granted; pauses when the tab is hidden
-  lib/nearest.ts  nearest places to pick up a bike (station or free bike), one OSRM table request; skips e-bikes < 15 %
-  lib/useSheetDrag.ts  phone bottom sheet: swipe between peek / half / full screen; collapses when the user pans/zooms the map.
-                  On desktop the panel slides out via its header button and a pill reopens it.
-  components/     MapView (MapLibre), RoutePanel, BikePanel, LivePanel, PlaceInput, BikeChips, OpenInMevo,
-                  Credit (footer: author avatar loaded live from GitHub, repo link, disclaimer)
-worker/         Cloudflare Worker
-  index.ts        routes, edge cache, cron handler
-  mevo.ts         upstream MEVO sources
-shared/types.ts API response types used by both sides
-public/         favicon, PWA manifest and icons (icons rendered from the brand mark SVG with sharp)
+src/
+  main.tsx          entry: providers + global styles
+  api.ts            TanStack Query hooks for /api/*, bike-number lookup (useAllBikes)
+  app/              shell: App (glue: data, tabs, camera, map-pick mode), Sheet (panel/bottom sheet,
+                    header, tabs), Credit, BrandMark, useTheme, sheet.css
+  map/              MapView (MapLibre lifecycle), layers.ts (GeoJSON + layer styles), LocateButton, map.css
+  features/
+    route/          RoutePanel, RouteResult, PlaceInput, useRoutePlanner (auto-planning, map picks,
+                    reverse geocoding), recentPlaces, route.css
+    bike/           BikePanel, TrackedBikeCard, StationCard, NearbyList, BikeChips, useTracking, useNearby, bike.css
+    live/           LivePanel, live.css
+  components/       shared UI: OpenInMevo
+  i18n/             index.tsx (provider, plural formatting), pl.ts, en.ts
+  lib/              no UI: planner, routing (OSRM), geocode (Nominatim), nearest, mevoApp (deep links),
+                    useLocation, useSheetDrag, storage (safe localStorage), viewport, geo
+  styles/           tokens.css (theme), base.css, ui.css (buttons, notices, pills, cards)
+worker/
+  index.ts          routes, edge cache, cron handler
+  mevo.ts           upstream MEVO sources
+shared/types.ts     API response types used by both sides
+public/             favicon, PWA manifest and icons (rendered from the brand mark SVG with sharp)
 ```
+
+Conventions: one component per file, CSS next to the feature that owns it, comments only for the
+non-obvious "why" (API quirks, limits, units).
 
 - Dev: `npm run dev` — Vite with `@cloudflare/vite-plugin` runs the app and the Worker together (http://localhost:5173).
 - Typecheck: `npm run typecheck`. Build: `npm run build`. Deploy: `npm run deploy` (or push to `main`, see `.github/workflows/deploy.yml`).

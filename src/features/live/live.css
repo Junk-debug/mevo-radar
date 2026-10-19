@@ -1,0 +1,39 @@
+.live-hero { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; row-gap: 2px; }
+.live-dot {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent);
+  animation: live-pulse 1.8s ease-out infinite;
+}
+@keyframes live-pulse { to { box-shadow: 0 0 0 10px transparent; } }
+.live-hero-value { font: 700 56px/1 var(--font-body); letter-spacing: -0.03em; }
+.live-hero-label { grid-column: 2; color: var(--muted); font-size: 14px; }
+
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tiles:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tile { display: grid; gap: 2px; align-content: start; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface-2); min-width: 0; }
+.tile-label { font-size: 12px; color: var(--muted); }
+.tile-value { font: 650 22px/1.15 var(--font-body); letter-spacing: -0.01em; }
+.tile-note { font-size: 12px; color: var(--muted); }
+.tile-up { color: var(--ok); }
+.tile-down { color: var(--gone); }
+
+.hist { margin: 0; display: grid; gap: 8px; }
+.hist figcaption { font-size: 12px; color: var(--muted); }
+.hist-bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; height: 120px; align-items: end; }
+.hist-col { display: grid; grid-template-rows: auto 1fr auto; height: 100%; align-items: end; gap: 4px; text-align: center; }
+.hist-count { font-size: 12px; font-weight: 600; }
+.hist-bar { display: block; min-height: 2px; background: var(--ebike); border-radius: 4px 4px 0 0; align-self: end; }
+.hist-col:hover .hist-bar { filter: brightness(1.12); }
+.hist-label { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 4px; }
+
+.rank { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.rank button {
+  width: 100%; display: grid; grid-template-columns: 1fr auto; column-gap: 12px; text-align: left;
+  padding: 8px 12px; border: 0; border-radius: var(--r-sm); background: var(--surface-2);
+}
+.rank button:hover { box-shadow: inset 0 0 0 1px var(--line); }
+.rank-name { font: 700 14px var(--font-mono); letter-spacing: 0.03em; }
+.rank-address { grid-column: 1; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-count { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-weight: 700; font-size: 18px; }
+
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }

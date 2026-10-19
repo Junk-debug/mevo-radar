@@ -1,6 +1,5 @@
-// OSRM run by FOSSGIS (routing.openstreetmap.de): real foot and bike profiles, free, CORS-enabled.
-// (The OSRM demo server ignores the profile and always routes by car.) Every call falls back to a
-// straight-line estimate so the planner never blocks on it.
+// FOSSGIS OSRM: the OSRM demo server ignores the profile and always routes by car.
+// Every call falls back to a straight-line estimate so planning never blocks on it.
 
 import { haversine, type LatLon } from "./geo";
 

@@ -11,10 +11,10 @@ async function get<T>(path: string): Promise<T> {
 export const useStations = () =>
   useQuery({ queryKey: ["stations"], queryFn: () => get<StationsResponse>("/api/stations"), refetchInterval: 30_000 });
 
-export const useFreeBikes = () =>
+const useFreeBikes = () =>
   useQuery({ queryKey: ["bikes"], queryFn: () => get<BikesResponse>("/api/bikes"), refetchInterval: 15_000 });
 
-export const useDockedBikes = () =>
+const useDockedBikes = () =>
   useQuery({ queryKey: ["docked"], queryFn: () => get<BikesResponse>("/api/docked"), refetchInterval: 60_000 });
 
 export const useSystemStats = (enabled: boolean) =>
@@ -27,28 +27,29 @@ const bare = (n: string) => n.replace(/^e/, "").replace(/^0+/, "");
 export function useAllBikes() {
   const free = useFreeBikes();
   const docked = useDockedBikes();
-  const bikes = useMemo(() => {
-    const map = new Map<string, Bike>();
-    for (const b of docked.data?.bikes ?? []) map.set(b.number.toLowerCase(), b);
-    for (const b of free.data?.bikes ?? []) map.set(b.number.toLowerCase(), b);
-    return map;
-  }, [free.data, docked.data]);
 
-  /** "4937" finds "e4937", "366" finds "0366". */
-  const resolve = (query: string): string => {
-    const q = normalizeNumber(query);
-    if (!q || bikes.has(q)) return q;
-    const hits = [...bikes.keys()].filter((k) => bare(k) === bare(q));
-    return hits.length === 1 ? hits[0] : q;
-  };
+  return useMemo(() => {
+    const bikes = new Map<string, Bike>();
+    for (const b of docked.data?.bikes ?? []) bikes.set(b.number.toLowerCase(), b);
+    for (const b of free.data?.bikes ?? []) bikes.set(b.number.toLowerCase(), b);
 
-  return {
-    bikes,
-    list: useMemo(() => [...bikes.values()], [bikes]),
-    resolve,
-    freeLoaded: free.isSuccess,
-    dockedLoaded: docked.isSuccess,
-    dockedUpdated: docked.data?.updated ?? null,
-    error: free.error ?? docked.error,
-  };
+    /** Forgiving lookup: "4937" finds "e4937", "366" finds "0366". */
+    const resolve = (query: string) => {
+      const q = normalizeNumber(query);
+      if (!q || bikes.has(q)) return q;
+      const hits = [...bikes.keys()].filter((k) => bare(k) === bare(q));
+      return hits.length === 1 ? hits[0] : q;
+    };
+
+    return {
+      bikes,
+      list: [...bikes.values()],
+      resolve,
+      dockedLoaded: docked.isSuccess,
+      dockedUpdated: docked.data?.updated ?? null,
+      error: free.error ?? docked.error,
+    };
+  }, [free.data, free.error, docked.data, docked.isSuccess, docked.error]);
 }
+
+export type AllBikes = ReturnType<typeof useAllBikes>;

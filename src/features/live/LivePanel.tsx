@@ -1,6 +1,7 @@
 import { useMemo } from "react";
-import type { Bike, Station, SystemStats } from "../../shared/types";
-import { useI18n } from "../i18n";
+import type { Bike, Station, SystemStats } from "../../../shared/types";
+import { useI18n } from "../../i18n";
+import "./live.css";
 
 interface Props {
   stats: SystemStats | undefined;

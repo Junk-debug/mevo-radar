@@ -1,4 +1,5 @@
 import { useRef, type MouseEvent, type PointerEvent, type RefObject } from "react";
+import { isPhone } from "./viewport";
 
 /** Phone bottom sheet height. On desktop only "peek" (hidden) vs anything else (shown) matters. */
 export type SheetState = "peek" | "half" | "full";
@@ -7,17 +8,13 @@ const START = 6; // px of movement before a press becomes a drag (so taps on tab
 const STEP = 60; // px to move one step (peek ↔ half ↔ full)
 const JUMP = 280; // px to skip a step (full → peek, peek → full)
 
-/**
- * Swipe the phone bottom sheet between peek, half and full screen by its top area
- * (grabber, header, tabs). Dragging down moves the sheet with the finger; dragging up from
- * "half" grows it live; on release it snaps to the next state in the swipe direction.
- */
+/** Swipe the phone sheet by its top area; it follows the finger and snaps on release. */
 export function useSheetDrag(sheet: RefObject<HTMLElement | null>, state: SheetState, setState: (s: SheetState) => void) {
   const drag = useRef<{ y: number; id: number; active: boolean; height: number } | null>(null);
   const justDragged = useRef(false);
 
   const onPointerDown = (e: PointerEvent) => {
-    if (!window.matchMedia("(max-width: 899px)").matches || e.button !== 0) return;
+    if (!isPhone() || e.button !== 0) return;
     drag.current = { y: e.clientY, id: e.pointerId, active: false, height: sheet.current?.offsetHeight ?? 0 };
   };
 
