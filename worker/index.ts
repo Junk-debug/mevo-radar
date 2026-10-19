@@ -2,7 +2,7 @@
 // so a cron scans them every 2 minutes into KV instead of per visitor.
 
 import type { BikesResponse, StationsResponse } from "../shared/types";
-import { fetchDockedBikes, fetchFreeBikes, fetchStations, fetchSystemStats } from "./mevo";
+import { errorMessage, fetchDockedBikes, fetchFreeBikes, fetchStations, fetchSystemStats } from "./mevo";
 
 interface Env {
   MEVO_KV: KVNamespace;
@@ -40,13 +40,31 @@ async function scanDocked(env: Env): Promise<BikesResponse> {
   return body;
 }
 
+function scanDockedLoggingFailure(env: Env, trigger: string): Promise<BikesResponse> {
+  return scanDocked(env).catch((e: unknown) => {
+    console.error(`Docked scan (${trigger}) failed, keeping the previous KV data: ${errorMessage(e)}`);
+    throw e;
+  });
+}
+
+// Frame numbers are the bikes' identity in the web app, so without GraphQL there is nothing
+// correct to show: answer an empty, flagged list instead of an error or GBFS bikes with fake numbers.
+async function loadFreeBikes(): Promise<BikesResponse> {
+  try {
+    return { updated: now(), bikes: await fetchFreeBikes() };
+  } catch (e) {
+    console.error(`Free bikes degraded to an empty list: ${errorMessage(e)}`);
+    return { updated: now(), bikes: [], degraded: true };
+  }
+}
+
 async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const { pathname } = new URL(request.url);
   switch (pathname) {
     case "/api/stations":
       return cached(request, ctx, 20, async (): Promise<StationsResponse> => fetchStations());
     case "/api/bikes":
-      return cached(request, ctx, 15, async (): Promise<BikesResponse> => ({ updated: now(), bikes: await fetchFreeBikes() }));
+      return cached(request, ctx, 15, loadFreeBikes);
     case "/api/stats":
       return cached(request, ctx, 30, fetchSystemStats);
     case "/api/docked": {
@@ -55,7 +73,7 @@ async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<R
       if (!stored) return json(await scanDocked(env), 30);
       // Serve what we have; if the cron lagged (or doesn't run, as in local dev), refresh in the background.
       const updated = metadata?.updated ?? 0;
-      if (now() - updated > DOCKED_STALE_AFTER_SECONDS && now() - lastScanStartedAt > MIN_SECONDS_BETWEEN_SCANS) ctx.waitUntil(scanDocked(env).catch(() => undefined));
+      if (now() - updated > DOCKED_STALE_AFTER_SECONDS && now() - lastScanStartedAt > MIN_SECONDS_BETWEEN_SCANS) ctx.waitUntil(scanDockedLoggingFailure(env, "stale refresh").catch(() => undefined));
       return new Response(stored, { headers: { "content-type": "application/json", "cache-control": "public, max-age=30" } });
     }
     default:
@@ -69,11 +87,12 @@ export default {
     try {
       return await api(request, env, ctx);
     } catch (e) {
-      return json({ error: e instanceof Error ? e.message : String(e) }, 0, 502);
+      console.error(`${new URL(request.url).pathname}: ${errorMessage(e)}`);
+      return json({ error: errorMessage(e) }, 0, 502);
     }
   },
 
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(scanDocked(env).then(() => undefined));
+    ctx.waitUntil(scanDockedLoggingFailure(env, "cron").then(() => undefined));
   },
 } satisfies ExportedHandler<Env>;

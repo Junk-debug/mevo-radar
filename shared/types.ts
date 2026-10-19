@@ -40,6 +40,8 @@ export interface StationsResponse {
 export interface BikesResponse {
   updated: UnixSeconds;
   bikes: Bike[];
+  /** /api/bikes only: the frame-number source failed, so `bikes` is empty rather than wrong. */
+  degraded?: boolean;
 }
 
 /** System-wide numbers, the same ones rowermevo.pl shows on its live page. */
