@@ -2,17 +2,21 @@ import { useMemo } from "react";
 import { useAllBikes, useStationsData, useSystemStats } from "@/api";
 import { useShowStation } from "@/bike/actions";
 import { useI18n } from "@/i18n";
-import { Notice } from "@/ui";
-import "./live.css";
+import { cx, Notice } from "@/ui";
 
 const BATTERY_BUCKET_STARTS = [0, 20, 40, 60, 80] as const;
 
+const NOTE_TONE = { up: "text-ok", down: "text-gone", none: "text-muted" };
+// Two columns, or three when there are exactly three tiles.
+const TILES = "grid grid-cols-2 gap-2 has-[>:nth-child(3):last-child]:grid-cols-3";
+const SECTION_TITLE = "mt-1.5 mx-0 mb-[-4px] text-[12px] font-semibold uppercase tracking-[0.06em] text-muted";
+
 function Tile({ label, value, note, tone }: { label: string; value: string; note?: string; tone?: "up" | "down" }) {
   return (
-    <div className="tile">
-      <span className="tile-label">{label}</span>
-      <span className="tile-value">{value}</span>
-      {note && <span className={`tile-note${tone ? ` tile-${tone}` : ""}`}>{note}</span>}
+    <div className="grid gap-0.5 content-start px-3 py-2.5 rounded-md bg-surface-2 min-w-0">
+      <span className="text-[12px] text-muted">{label}</span>
+      <span className="font-body font-[650] text-[22px]/[1.15] tracking-[-0.01em]">{value}</span>
+      {note && <span className={cx("text-[12px]", NOTE_TONE[tone ?? "none"])}>{note}</span>}
     </div>
   );
 }
@@ -54,18 +58,18 @@ export function LivePanel() {
     : null;
 
   return (
-    <div className="panel-body live-panel">
+    <>
       {statsError && !stats && <Notice tone="error">{t("statsUnavailable")}</Notice>}
 
       {stats && (
         <>
-          <section className="live-hero" aria-live="polite">
-            <span className="live-dot" aria-hidden="true" />
-            <span className="live-hero-value">{num(stats.activeTrips)}</span>
-            <span className="live-hero-label">{t("ridingNow", { n: stats.activeTrips })}</span>
+          <section className="grid grid-cols-[auto_1fr] items-center gap-x-2.5 gap-y-0.5" aria-live="polite">
+            <span className="size-2.5 rounded-full bg-accent shadow-[0_0_0_0_color-mix(in_srgb,var(--accent)_50%,transparent)] animate-live-pulse motion-reduce:animate-none" aria-hidden="true" />
+            <span className="font-body font-bold text-[56px]/none tracking-[-0.03em]">{num(stats.activeTrips)}</span>
+            <span className="col-start-2 text-muted text-[14px]">{t("ridingNow", { n: stats.activeTrips })}</span>
           </section>
 
-          <div className="tiles">
+          <div className={TILES}>
             <Tile label={t("tripsToday")} value={num(stats.tripsToday)} note={t("yesterday", { n: num(stats.tripsYesterday) })} />
             <Tile label={t("ridersToday")} value={num(stats.uniqueUsersToday)} note={t("medianTrip", { d: duration(stats.medianDurationToday) })} />
             <Tile
@@ -79,43 +83,47 @@ export function LivePanel() {
         </>
       )}
 
-      <h3 className="section-title">{t("fleetNow")}</h3>
-      <div className="tiles">
+      <h3 className={SECTION_TITLE}>{t("fleetNow")}</h3>
+      <div className={TILES}>
         <Tile label={t("availableBikes")} value={num(fleet.available)} note={t("fleetSplit", { e: num(fleet.ebikes), c: num(fleet.classic) })} />
         <Tile label={t("avgBattery")} value={fleet.avgBattery != null ? `${fleet.avgBattery}%` : "—"} note={t("ofAvailableEbikes")} />
         <Tile label={t("emptyStations")} value={num(fleet.empty)} note={t("ofStations", { n: num(fleet.activeStations) })} />
       </div>
 
-      <figure className="hist">
-        <figcaption>{t("batteryDistribution")}</figcaption>
-        <div className="hist-bars" role="list">
+      <figure className="m-0 grid gap-2">
+        <figcaption className="text-[12px] text-muted">{t("batteryDistribution")}</figcaption>
+        <div className="grid grid-cols-[repeat(5,1fr)] gap-0.5 h-[120px] items-end" role="list">
           {fleet.buckets.map((count, i) => {
             const range = `${BATTERY_BUCKET_STARTS[i]}–${BATTERY_BUCKET_STARTS[i] + 20}%`;
             return (
-              <div className="hist-col" key={i} role="listitem" title={`${range}: ${num(count)}`} aria-label={`${range}: ${num(count)}`}>
-                <span className="hist-count">{num(count)}</span>
-                <span className="hist-bar" style={{ height: `${(count / maxBucket) * 100}%` }} />
-                <span className="hist-label">{range}</span>
+              <div className="group/col grid grid-rows-[auto_1fr_auto] h-full items-end gap-1 text-center" key={i} role="listitem" title={`${range}: ${num(count)}`} aria-label={`${range}: ${num(count)}`}>
+                <span className="text-[12px] font-semibold">{num(count)}</span>
+                <span className="block min-h-[2px] bg-ebike rounded-t-[4px] self-end group-hover/col:brightness-112" style={{ height: `${(count / maxBucket) * 100}%` }} />
+                <span className="text-[11px] text-muted border-t border-line pt-1">{range}</span>
               </div>
             );
           })}
         </div>
       </figure>
 
-      <h3 className="section-title">{t("fullestStations")}</h3>
-      <ol className="rank">
+      <h3 className={SECTION_TITLE}>{t("fullestStations")}</h3>
+      <ol className="list-none m-0 p-0 grid gap-1">
         {fleet.fullest.map((s) => (
           <li key={s.id}>
-            <button type="button" onClick={() => onStation(s.id)}>
-              <span className="rank-name">{s.name}</span>
-              <span className="rank-address">{s.address}</span>
-              <span className="rank-count">{num(s.classicBikes + s.ebikes)}</span>
+            <button
+              type="button"
+              className="w-full grid grid-cols-[1fr_auto] gap-x-3 text-left px-3 py-2 border-0 rounded-sm bg-surface-2 hover:shadow-[inset_0_0_0_1px_var(--line)]"
+              onClick={() => onStation(s.id)}
+            >
+              <span className="font-mono font-bold text-[14px]/[normal] tracking-[0.03em]">{s.name}</span>
+              <span className="col-start-1 text-[12px] text-muted truncate">{s.address}</span>
+              <span className="col-start-2 [grid-row:1/span_2] self-center font-bold text-[18px]">{num(s.classicBikes + s.ebikes)}</span>
             </button>
           </li>
         ))}
       </ol>
 
-      <p className="muted small">{t("statsSource")}</p>
-    </div>
+      <p className="text-muted text-[13px]">{t("statsSource")}</p>
+    </>
   );
 }

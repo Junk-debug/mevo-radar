@@ -7,7 +7,6 @@ import { NearbyList } from "./NearbyList";
 import { StationCard } from "./StationCard";
 import { TrackedBikeCard } from "./TrackedBikeCard";
 import { useFindNearest, useTrackBike, useTrackedBike } from "./actions";
-import "./bike.css";
 
 export function BikePanel() {
   const { t } = useI18n();
@@ -30,9 +29,9 @@ export function BikePanel() {
   }, [shownNumber]);
 
   return (
-    <div className="panel-body">
+    <>
       <form
-        className="bike-search"
+        className="flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           if (query.trim()) track(query);
@@ -41,7 +40,7 @@ export function BikePanel() {
         <label htmlFor="bike-q" className="sr-only">{t("bikeSearchPlaceholder")}</label>
         <input
           id="bike-q"
-          className="mono"
+          className="flex-1 min-w-0 px-3.5 py-3 border border-line rounded-md bg-surface-2 font-mono text-[16px] lowercase"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("bikeSearchPlaceholder")}
@@ -52,15 +51,15 @@ export function BikePanel() {
         <Button variant="primary" type="submit">{t("find")}</Button>
       </form>
 
-      <Button variant="outline" fullWidth icon="target" className="nearest" onClick={findNearest} disabled={nearby.loading}>
+      <Button variant="outline" fullWidth icon="target" className="[&_svg]:text-me" onClick={findNearest} disabled={nearby.loading}>
         {nearby.loading ? t("findingNearest") : t("nearestBike")}
       </Button>
 
       {nearby.error && <Notice tone="warn">{t(nearby.error === "location" ? "nearestNeedsLocation" : "nearestNone")}</Notice>}
       {showingNearby && <NearbyList />}
-      {!number && !stationId && !showingNearby && <p className="hint">{t("bikeHint")}</p>}
+      {!number && !stationId && !showingNearby && <p className="mt-[-4px] mx-0 mb-0 text-muted text-[13px]">{t("bikeHint")}</p>}
       {number && !showingNearby && <TrackedBikeCard />}
       {stationId && <StationCard />}
-    </div>
+    </>
   );
 }

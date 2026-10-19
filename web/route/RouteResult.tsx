@@ -5,7 +5,7 @@ import { useTrackBike } from "@/bike/actions";
 import { useI18n } from "@/i18n";
 import { formatDistance, formatDuration } from "@/lib/geo";
 import { bikesAt, googleMapsUrl, LOW_STOCK_LIMIT, type BikePreference, type TripPlan } from "@/lib/planner";
-import { Button, Card, Notice } from "@/ui";
+import { Actions, Button, Card, cx, Notice, StopTitle } from "@/ui";
 
 interface Props {
   plan: TripPlan;
@@ -15,10 +15,31 @@ interface Props {
 const minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
 const clock = (date: Date) => date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+const LEG: Record<TripPlan["legs"][number]["mode"], string> = {
+  walk: "bg-surface-2 text-muted border border-dashed border-line",
+  bike: "bg-accent text-accent-ink",
+};
+
+// Steps hang on a vertical line drawn by ::before (dotted for walking, solid for riding);
+// stops get a ring on the line from ::after.
+const STEP_LINE = "relative before:content-[''] before:absolute before:left-[-16px] before:top-0 before:bottom-[-4px] last:before:bottom-1/2";
+const STEP = {
+  walk: cx(STEP_LINE, "py-1.5 before:[border-left:3px_dotted_var(--muted)]"),
+  ride: cx(STEP_LINE, "py-1.5 before:[border-left:3px_solid_var(--accent)]"),
+  stop: cx(
+    STEP_LINE,
+    "before:[border-left:3px_dotted_var(--muted)] grid gap-1.5 my-0.5 pt-2 px-3 pb-3 rounded-md bg-surface-2",
+    "after:content-[''] after:absolute after:left-[-22px] after:top-2 after:size-[15px] after:rounded-full after:bg-surface after:[border:3px_solid_var(--accent)]",
+  ),
+};
+const STEP_LABEL = "text-[12px] font-semibold uppercase tracking-[0.06em] text-muted";
+const STEP_META = "ml-2 font-mono text-[12.5px]";
+const MUTED_SMALL = "text-muted text-[13px]";
+
 function StationCounts({ station }: { station: Station }) {
   const { t } = useI18n();
   return (
-    <span className="counts">
+    <span className="flex flex-wrap gap-x-3.5 gap-y-1 text-[13px] text-muted [&_b]:text-ink [&_b]:tabular-nums">
       <span><b>{station.ebikes}</b> {t("ebikesShort")}</span>
       <span><b>{station.classicBikes}</b> {t("bikesShort")}</span>
       <span><b>{station.freeDocks}</b> {t("freeDocks")}</span>
@@ -31,9 +52,12 @@ function LegBar({ plan }: { plan: TripPlan }) {
   const total = plan.legs.reduce((s, l) => s + l.duration, 0);
   const label = plan.legs.map((l) => `${t(l.mode === "walk" ? "walk" : "ride")} ${formatDuration(l.duration)}`).join(", ");
   return (
-    <div className="legbar" role="img" aria-label={label}>
+    <div className="flex gap-[3px] h-[26px]" role="img" aria-label={label}>
       {plan.legs.map((l, i) => (
-        <span key={i} className={`legbar-${l.mode}`} style={{ flexGrow: Math.max(l.duration, total * 0.08) }}>
+        <span
+          key={i}
+          className={cx("grid place-items-center min-w-0 overflow-hidden whitespace-nowrap rounded-[6px] px-1.5 font-mono font-semibold text-[11px]/[normal]", LEG[l.mode])}
+          style={{ flexGrow: Math.max(l.duration, total * 0.08) }}>
           {formatDuration(l.duration)}
         </span>
       ))}
@@ -46,26 +70,24 @@ function Steps({ plan }: { plan: TripPlan }) {
   const [walkIn, ride, walkOut] = plan.legs;
   const leg = (l: typeof walkIn) => `${formatDistance(l.distance)} · ${formatDuration(l.duration)}`;
   return (
-    <ol className="steps">
-      <li className="step step-walk"><span className="step-label">{t("walk")}</span><span className="step-meta">{leg(walkIn)}</span></li>
-      <li className="step step-stop">
+    <ol className="list-none m-0 pl-[22px] grid gap-1">
+      <li className={STEP.walk}><span className={STEP_LABEL}>{t("walk")}</span><span className={STEP_META}>{leg(walkIn)}</span></li>
+      <li className={STEP.stop}>
         {plan.pickup.kind === "station" ? (
           <>
-            <h3 className="stop-name">{plan.pickup.station.name}</h3>
-            <p className="stop-address">{plan.pickup.station.address}</p>
+            <StopTitle as="h3" name={plan.pickup.station.name} address={plan.pickup.station.address} />
             <StationCounts station={plan.pickup.station} />
           </>
         ) : (
-          <h3 className="stop-name">{plan.pickup.bike.number}</h3>
+          <StopTitle as="h3" name={plan.pickup.bike.number} />
         )}
       </li>
-      <li className="step step-ride"><span className="step-label">{t("ride")}</span><span className="step-meta">{leg(ride)}</span></li>
-      <li className="step step-stop">
-        <h3 className="stop-name">{plan.dropoff.name}</h3>
-        <p className="stop-address">{plan.dropoff.address}</p>
+      <li className={STEP.ride}><span className={STEP_LABEL}>{t("ride")}</span><span className={STEP_META}>{leg(ride)}</span></li>
+      <li className={STEP.stop}>
+        <StopTitle as="h3" name={plan.dropoff.name} address={plan.dropoff.address} />
         <StationCounts station={plan.dropoff} />
       </li>
-      <li className="step step-walk"><span className="step-label">{t("walk")}</span><span className="step-meta">{leg(walkOut)}</span></li>
+      <li className={STEP.walk}><span className={STEP_LABEL}>{t("walk")}</span><span className={STEP_META}>{leg(walkOut)}</span></li>
     </ol>
   );
 }
@@ -79,30 +101,30 @@ export function RouteResult({ plan, pref }: Props) {
   const pickupCount = pickup.kind === "station" ? bikesAt(pickup.station, pref) : null;
 
   return (
-    <section className="result" aria-live="polite">
-      <div className="summary">
-        <span className="summary-time">{formatDuration(total)}</span>
-        <span className="summary-meta">
+    <section className="grid gap-3" aria-live="polite">
+      <div className="flex items-baseline flex-wrap gap-x-2.5 gap-y-1">
+        <span className="font-display font-extrabold text-[30px]/none tracking-[-0.02em]">{formatDuration(total)}</span>
+        <span className="text-muted text-[13.5px]">
           {t("arriveAt", { time: clock(new Date(Date.now() + total * 1000)) })} · {formatDistance(legs.reduce((s, l) => s + l.distance, 0))}
         </span>
       </div>
       <LegBar plan={plan} />
 
-      <Card className="pickup">
+      <Card>
         {pickup.kind === "station" ? (
           <>
-            <strong className="pickup-title">{t("pickupAt", { name: pickup.station.name })}</strong>
-            <span className="muted small">{t("pickupMeta", { min: walkToBike, n: pickupCount ?? 0 })}</span>
+            <strong className="text-[16px]">{t("pickupAt", { name: pickup.station.name })}</strong>
+            <span className={MUTED_SMALL}>{t("pickupMeta", { min: walkToBike, n: pickupCount ?? 0 })}</span>
             {pickup.bikes.length > 0 && <BikeChips bikes={pickup.bikes} onPick={onBike} />}
             {pickupCount !== null && pickupCount <= LOW_STOCK_LIMIT && <Notice tone="warn">{t("lowBikes", { n: pickupCount })}</Notice>}
           </>
         ) : (
           <>
-            <strong className="pickup-title">{t("pickupFreeBike", { number: pickup.bike.number })}</strong>
-            <span className="muted small">{t("freeBikeMeta", { min: walkToBike })}</span>
+            <strong className="text-[16px]">{t("pickupFreeBike", { number: pickup.bike.number })}</strong>
+            <span className={MUTED_SMALL}>{t("freeBikeMeta", { min: walkToBike })}</span>
           </>
         )}
-        <div className="actions">
+        <Actions>
           <OpenInMevo
             target={
               pickup.kind === "station"
@@ -113,13 +135,13 @@ export function RouteResult({ plan, pref }: Props) {
             }
           />
           <Button variant="ghost" href={googleMapsUrl(plan)} external>{t("openInGoogle")}</Button>
-        </div>
+        </Actions>
       </Card>
 
-      <div className="dropoff">
+      <div className="grid gap-2 px-0.5">
         <span>
           <strong>{t("dropoffAt", { name: dropoff.name })}</strong>
-          <span className="muted small"> · {t("dropoffMeta", { n: dropoff.freeDocks })}</span>
+          <span className={MUTED_SMALL}> · {t("dropoffMeta", { n: dropoff.freeDocks })}</span>
         </span>
         {dropoff.freeDocks <= LOW_STOCK_LIMIT && (
           <Notice tone="warn">
@@ -136,8 +158,8 @@ export function RouteResult({ plan, pref }: Props) {
         </Notice>
       )}
 
-      <details className="details">
-        <summary>{t("routeDetails")}</summary>
+      <details className="group/details">
+        <summary className="cursor-pointer text-muted text-[13.5px] font-semibold px-0.5 py-1 group-open/details:mb-2">{t("routeDetails")}</summary>
         <Steps plan={plan} />
       </details>
     </section>

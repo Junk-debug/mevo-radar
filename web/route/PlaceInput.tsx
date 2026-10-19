@@ -3,7 +3,7 @@ import { useI18n } from "@/i18n";
 import { searchPlaces } from "@/lib/geocode";
 import { recentPlaces } from "@/lib/recentPlaces";
 import type { Field, PlaceValue } from "@/store/route";
-import { Icon, type IconName } from "@/ui";
+import { cx, Icon, type IconName } from "@/ui";
 
 interface Props {
   field: Field;
@@ -27,6 +27,11 @@ const MIN_QUERY = 3;
 const DEBOUNCE_MS = 350;
 
 const ICONS: Record<Option["icon"], IconName> = { me: "target", map: "pin", recent: "clock", place: "pin-outline" };
+
+const DOT: Record<Field, string> = {
+  from: "rounded-full border-[2.5px] border-ink",
+  to: "rounded-[2px] bg-accent rotate-45",
+};
 
 export function PlaceInput({ field, value, placeholder, onChoose, onPickOnMap, onUseMyLocation, onFocus }: Props) {
   const { t, lang } = useI18n();
@@ -96,12 +101,15 @@ export function PlaceInput({ field, value, placeholder, onChoose, onPickOnMap, o
   const options = typing ? results : shortcuts;
 
   return (
-    <div className={`place place-${field}`}>
-      <span className={`place-dot place-dot-${field}`} aria-hidden="true" />
+    <div className="relative flex items-center gap-2.5 pr-11 pl-3.5 not-first:border-t not-first:border-line">
+      <span className={cx("size-2.5 flex-none", DOT[field])} aria-hidden="true" />
       <label htmlFor={id} className="sr-only">{t(field)}</label>
       <input
         id={id}
-        className={value?.kind === "me" ? "is-me" : undefined}
+        className={cx(
+          "flex-1 min-w-0 border-0 bg-transparent px-0 py-[13px] outline-none placeholder:text-muted",
+          value?.kind === "me" ? "text-me font-semibold" : field === "to" && "font-semibold",
+        )}
         value={text}
         placeholder={placeholder}
         autoComplete="off"
@@ -131,25 +139,29 @@ export function PlaceInput({ field, value, placeholder, onChoose, onPickOnMap, o
         }}
       />
       {open && options.length > 0 && (
-        <ul className="suggestions" id={`${id}-list`} role="listbox">
+        <ul
+          className="absolute z-5 top-[calc(100%_+_4px)] left-0 right-0 m-0 p-1 list-none max-h-[50vh] overflow-y-auto bg-surface border border-line rounded-md shadow-panel"
+          id={`${id}-list`}
+          role="listbox"
+        >
           {options.map((o, i) => (
             <Fragment key={o.key}>
               {o.icon === "recent" && options[i - 1]?.icon !== "recent" && (
-                <li className="suggestions-title" role="presentation">{t("recent")}</li>
+                <li className="pt-2 px-2.5 pb-0.5 text-[11.5px] font-semibold uppercase tracking-[0.08em] text-muted" role="presentation">{t("recent")}</li>
               )}
               <li
                 role="option"
                 aria-selected={i === active}
-                className={`suggestion suggestion-${o.icon}`}
+                className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm cursor-pointer aria-selected:bg-surface-2 hover:bg-surface-2"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   o.run();
                 }}
               >
-                <Icon name={ICONS[o.icon]} />
-                <span>
+                <Icon name={ICONS[o.icon]} className={cx("flex-none", o.icon === "me" ? "text-me" : "text-muted")} />
+                <span className="grid min-w-0">
                   <strong>{o.label}</strong>
-                  {o.detail && <small>{o.detail}</small>}
+                  {o.detail && <small className="text-[12.5px] text-muted truncate">{o.detail}</small>}
                 </span>
               </li>
             </Fragment>

@@ -1,0 +1,13 @@
+/* Layer order: MapLibre's stylesheet lowest, Tailwind utilities highest. Tailwind's preflight is
+   left out on purpose: base.css is the reset, and the components rely on browser defaults it would strip. */
+@layer vendor, theme, base, components, utilities;
+
+@import "maplibre-gl/dist/maplibre-gl.css" layer(vendor);
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source("../");
+@import "./tokens.css";
+@import "./base.css" layer(base);
+@import "../map/map.css" layer(components);
+
+/* Plain :hover like before, also on touch screens (Tailwind's default skips devices without hover). */
+@custom-variant hover (&:hover);

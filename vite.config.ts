@@ -1,4 +1,5 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
@@ -8,7 +9,7 @@ export default defineConfig({
   // The web app (index.html, public/) lives in web/; the build output stays at the project root.
   root: "web",
   build: { outDir: "../dist", emptyOutDir: true },
-  plugins: [react(), cloudflare({ configPath: "../wrangler.jsonc" })],
+  plugins: [react(), tailwindcss(), cloudflare({ configPath: "../wrangler.jsonc" })],
   resolve: {
     alias: {
       "@/": fileURLToPath(new URL("./web/", import.meta.url)),

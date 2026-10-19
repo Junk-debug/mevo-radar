@@ -114,4 +114,7 @@ export const en: Dict = {
   fullestStations: "Most bikes at a station",
   statsSource: "System stats: MEVO, refreshed every 30 s. Fleet: our map data.",
   statsUnavailable: "Couldn't load MEVO statistics.",
+
+  panelCrashed: "Something went wrong in this panel. The map still works.",
+  reload: "Reload page",
 };
