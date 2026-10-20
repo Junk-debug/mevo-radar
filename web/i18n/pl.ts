@@ -89,7 +89,7 @@ export const pl = {
   stationBikes: "{n} {n:rower|rowery|rowerów}",
   numbersAt: "numery z {time}",
   numbersLoading: "numery się ładują",
-  numbersOutOfDate: "Na stacji jest teraz {total}, a na liście numerów {listed} — lista odświeża się co ok. 2 min.",
+  numbersOutOfDate: "Na stacji jest teraz {total}, a na liście numerów {listed} — lista odświeża się co ok. 5 min.",
   unavailableBike: "niedostępny",
 
   ridingNow: "{n:osoba jedzie|osoby jadą|osób jedzie} teraz rowerem MEVO",

@@ -28,7 +28,7 @@ Polish and English, light and dark themes, works on phones — and installs to t
 
 **Bike finder**
 - Search by frame number, forgiving input (`4937` finds `e4937`)
-- Bikes at stations and outside them, refreshed every 15 s (outside) and 2 min (at stations)
+- Bikes at stations and outside them, refreshed every 15 s (outside) and 5 min (at stations)
 - Status: free, at a station, unavailable (service or flat battery), or on a trip
 - Tap any station to list its bikes with battery levels; tap any bike on the map to track it
 - Walking directions to the bike, copy number
@@ -45,7 +45,7 @@ One Cloudflare Worker serves the React app and a small API:
 | `/api/stations` | stations and live counts (GBFS) | 20 s |
 | `/api/bikes` | bikes outside stations, with numbers | 15 s |
 | `/api/stats` | riding now, trips today, records | 30 s |
-| `/api/docked` | bikes at stations, with numbers | 2 min (cron → KV) |
+| `/api/docked` | bikes at stations, with numbers | 5 min (cron → KV) |
 
 The bike-number API only answers requests from rowermevo.pl and lists bikes one station at a time, so the Worker fetches it server-side and scans all stations on a 2-minute cron, keeping the result in KV.
 

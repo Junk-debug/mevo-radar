@@ -58,7 +58,7 @@ Conventions:
 
 - Dev: `npm run dev` — Vite with `@cloudflare/vite-plugin` runs the app and the Worker together (http://localhost:5173).
 - Typecheck: `npm run typecheck`. Build: `npm run build`. Deploy: `npm run deploy` (or push to `main`, see `.github/workflows/deploy.yml`).
-- Trigger the cron locally: `curl -X POST "http://localhost:5173/cdn-cgi/local/explorer/api/local/scheduled?worker=mevo-radar" -H 'content-type: application/json' -d '{"cron":"*/2 * * * *"}'`
+- Trigger the cron locally: `curl -X POST "http://localhost:5173/cdn-cgi/local/explorer/api/local/scheduled?worker=mevo-radar" -H 'content-type: application/json' -d '{"cron":"*/5 * * * *"}'`
 
 ## API (Worker)
 | Route | Source | Freshness |
@@ -66,7 +66,7 @@ Conventions:
 | `GET /api/stations` | GBFS `station_information` + `station_status` | edge cache 20 s |
 | `GET /api/bikes` | GraphQL `freeFloatingVehicles` — bikes outside stations, with numbers; `appId` joined from GBFS `free_bike_status` by exact coordinates | edge cache 15 s |
 | `GET /api/stats` | GraphQL `systemActiveTripCount` + `systemStats` | edge cache 30 s |
-| `GET /api/docked` | GraphQL `dockGroupVehicles` per station — bikes at stations, with numbers | KV, refreshed by cron every 2 min |
+| `GET /api/docked` | GraphQL `dockGroupVehicles` per station — bikes at stations, with numbers | KV, refreshed by cron every 5 min; edge cache 30 s |
 
 ## Data sources
 - **MEVO GBFS** `https://gbfs.urbansharing.com/rowermevo.pl/` — official open data, CORS open. Send `Client-Identifier: mevo-radar`. Station counts only; its `bike_id`s are anonymised and rotate after every trip.
@@ -97,7 +97,7 @@ Conventions:
 - `wrangler.jsonc` holds the KV namespace id and the custom-domain routes — not secrets, keep them committed.
 - Pushes to `main` deploy via `.github/workflows/deploy.yml`; it needs repository secrets `CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers") and `CLOUDFLARE_ACCOUNT_ID`. Each run is recorded as a `production` deployment (URL on the run page and in the repo sidebar) and writes a job summary with the live URLs, commit and Worker version.
 - Manual deploy: `npx wrangler login` once, then `npm run deploy`. Deploys use the config the build writes (`dist/mevo_radar/wrangler.json`), because Vite's root is `web/`.
-- Free-plan limits that shape the design: 1000 KV writes/day (hence cron every 2 min, 720/day), 50 subrequests per invocation (a full station scan uses ~21).
+- Free-plan limits that shape the design: 1000 KV writes/day (hence cron every 5 min, 288/day, under the 50 % usage alert), 50 subrequests per invocation (a full station scan uses ~21).
 
 ## Gotchas
 - MapLibre 6 finds its web worker relative to its own bundle at runtime. `MapView.tsx` bundles it via `?worker&url` + `setWorkerUrl`, and `vite.config.ts` excludes `maplibre-gl` from dependency prebundling so the main thread and the worker share the same module code. Without both, the map stays blank.

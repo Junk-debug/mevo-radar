@@ -21,7 +21,7 @@
   ],
   "triggers": {
     // Refresh frame numbers of bikes at stations. Free KV allows 1000 writes/day, so not every minute.
-    "crons": ["*/2 * * * *"]
+    "crons": ["*/5 * * * *"]
   },
   "observability": { "enabled": true }
 }

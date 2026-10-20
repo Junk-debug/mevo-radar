@@ -91,7 +91,7 @@ export const en: Dict = {
   stationBikes: "{n} {n:bike|bikes}",
   numbersAt: "numbers from {time}",
   numbersLoading: "numbers loading",
-  numbersOutOfDate: "The station has {total} now, the number list shows {listed} — it refreshes about every 2 min.",
+  numbersOutOfDate: "The station has {total} now, the number list shows {listed} — it refreshes about every 5 min.",
   unavailableBike: "unavailable",
 
   ridingNow: "{n:person|people} riding a MEVO bike right now",
