@@ -44,6 +44,11 @@ export interface BikesResponse {
   degraded?: boolean;
 }
 
+/** /api/stations/:id/bikes — the bikes standing at one station right now. */
+export interface StationBikesResponse extends BikesResponse {
+  stationId: string;
+}
+
 /** System-wide numbers, the same ones rowermevo.pl shows on its live page. */
 export interface SystemStats {
   updated: UnixSeconds;

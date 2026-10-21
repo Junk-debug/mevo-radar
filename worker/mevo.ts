@@ -19,18 +19,17 @@ const GRAPHQL = "https://core.urbansharing.com/public/api/v1/graphql";
 const SYSTEM_ID = "inurba-gdansk";
 const VEHICLE_FIELDS = "number batteryCharge currentRange category available";
 const STATIONS_PER_QUERY = 40;
-const DOCKED_SCAN_CONCURRENCY = 8; // gentler than all at once, yet a scan still fits the 30 s waitUntil of a stale refresh
+const DOCKED_SCAN_CONCURRENCY = 6; // an invocation may have 6 connections waiting for headers; more would just queue
 const CHUNK_RETRY_DELAY_MS = 1000;
-const MAX_FAILED_CHUNK_SHARE = 0.5;
-const SUBREQUEST_LIMIT = 50; // Workers free plan, per invocation
-const STATION_FEED_REQUESTS = 2;
+const STATION_INFO_CACHE_SECONDS = 300; // names and positions; change only when a station is added or moved
 
 export const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-async function gbfs<T extends z.ZodType>(feed: string, schema: T): Promise<z.infer<T>> {
+async function gbfs<T extends z.ZodType>(feed: string, schema: T, cacheTtl?: number): Promise<z.infer<T>> {
   const source = `GBFS ${feed}`;
   const res = await fetch(`${GBFS}/${feed}.json`, {
     headers: { "Client-Identifier": "mevo-radar" },
+    ...(cacheTtl ? { cf: { cacheTtl, cacheEverything: true } } : {}),
   });
   if (!res.ok) throw new Error(`${source}: HTTP ${res.status}`);
   return parseUpstream(source, schema, await res.json());
@@ -72,12 +71,19 @@ function toBike(v: Vehicle, lat: number, lon: number, stationId: string | null, 
   };
 }
 
+export const fetchStationInfo = async () =>
+  (await gbfs("station_information", stationInformationFeed, STATION_INFO_CACHE_SECONDS)).data.stations;
+
+export async function fetchStationStatus() {
+  const status = await gbfs("station_status", stationStatusFeed);
+  return { stations: status.data.stations, updated: status.last_updated };
+}
+
+export type StationStatus = Awaited<ReturnType<typeof fetchStationStatus>>["stations"][number];
+
 async function stationFeeds() {
-  const [info, status] = await Promise.all([
-    gbfs("station_information", stationInformationFeed),
-    gbfs("station_status", stationStatusFeed),
-  ]);
-  return { info: info.data.stations, status: status.data.stations, updated: status.last_updated };
+  const [info, status] = await Promise.all([fetchStationInfo(), fetchStationStatus()]);
+  return { info, status: status.stations, updated: status.updated };
 }
 
 export async function fetchStations(): Promise<StationsResponse> {
@@ -170,33 +176,41 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, task: (item: 
   return results;
 }
 
-/**
- * Bikes standing at stations. A station chunk that fails twice is skipped so one upstream hiccup
- * (e.g. a 504) doesn't lose the whole scan; if most chunks fail, it throws so callers keep the previous data.
- */
-export async function fetchDockedBikes(): Promise<Bike[]> {
-  const { info, status } = await stationFeeds();
-  const coords = new Map(info.map((s) => [s.station_id, s]));
-  // Every station, not just ones with available bikes: unavailable bikes (flat battery, service)
-  // still stand there and should be findable. ~870 stations → ~22 queries, within the subrequest limit.
-  const ids = status.map((s) => s.station_id).filter((id) => /^\d+$/.test(id));
+export type StationCoords = Map<string, { lat: number; lon: number }>;
 
+export interface StationBikesBatch {
+  /** Bikes per station, for every station whose query succeeded (an empty list when none stand there). */
+  byStation: Map<string, Bike[]>;
+  chunks: number;
+  failedChunks: number;
+}
+
+/** GBFS station ids are numeric; only those go into the GraphQL query text. */
+export const isStationId = (id: string) => /^\d+$/.test(id);
+
+const dockGroupQuery = (ids: string[]) =>
+  graphql(
+    "dockGroupVehicles",
+    dockGroupVehiclesResult,
+    `query { ${ids.map((id) => `s${id}: dockGroupVehicles(dockGroupId: "${id}") { ${VEHICLE_FIELDS} }`).join(" ")} }`,
+  );
+
+/**
+ * Bikes standing at the given stations, ~40 stations per aliased query. A chunk that fails twice is
+ * left out of `byStation`, so one upstream hiccup (e.g. a 504) doesn't lose the rest and callers can
+ * keep their previous data for those stations. `subrequestBudget` caps the queries including retries.
+ */
+export async function fetchStationBikesBatch(ids: string[], coords: StationCoords, subrequestBudget: number): Promise<StationBikesBatch> {
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += STATIONS_PER_QUERY) chunks.push(ids.slice(i, i + STATIONS_PER_QUERY));
+  if (chunks.length > subrequestBudget) throw new Error(`${chunks.length} station chunks exceed the budget of ${subrequestBudget} subrequests`);
 
-  const queryChunk = (chunk: string[]) =>
-    graphql(
-      "dockGroupVehicles",
-      dockGroupVehiclesResult,
-      `query { ${chunk.map((id) => `s${id}: dockGroupVehicles(dockGroupId: "${id}") { ${VEHICLE_FIELDS} }`).join(" ")} }`,
-    );
-
-  // Retries share whatever the first attempts leave of the subrequest limit.
-  let retriesLeft = SUBREQUEST_LIMIT - STATION_FEED_REQUESTS - chunks.length;
+  // Retries share whatever the first attempts leave of the budget.
+  let retriesLeft = subrequestBudget - chunks.length;
   const results = await mapWithConcurrency(chunks, DOCKED_SCAN_CONCURRENCY, async (chunk, index) => {
     const label = `Docked chunk ${index + 1}/${chunks.length} (stations ${chunk[0]}-${chunk[chunk.length - 1]})`;
     try {
-      return await queryChunk(chunk);
+      return await dockGroupQuery(chunk);
     } catch (firstError) {
       if (retriesLeft <= 0) {
         console.warn(`${label} skipped, no subrequests left to retry: ${errorMessage(firstError)}`);
@@ -205,7 +219,7 @@ export async function fetchDockedBikes(): Promise<Bike[]> {
       retriesLeft--;
       await delay(CHUNK_RETRY_DELAY_MS);
       try {
-        return await queryChunk(chunk);
+        return await dockGroupQuery(chunk);
       } catch (retryError) {
         console.warn(`${label} skipped after a retry: ${errorMessage(retryError)}`);
         return null;
@@ -213,19 +227,23 @@ export async function fetchDockedBikes(): Promise<Bike[]> {
     }
   });
 
-  const failedChunks = results.filter((result) => result === null).length;
-  if (failedChunks > chunks.length * MAX_FAILED_CHUNK_SHARE) {
-    throw new Error(`Docked scan failed: ${failedChunks} of ${chunks.length} station chunks failed`);
-  }
-
-  const bikes: Bike[] = [];
-  for (const result of results) {
-    for (const [alias, vehicles] of Object.entries(result ?? {})) {
-      const id = alias.slice(1);
+  const byStation = new Map<string, Bike[]>();
+  results.forEach((result, index) => {
+    if (!result) return;
+    for (const id of chunks[index]) {
       const st = coords.get(id);
-      if (!st || !vehicles) continue;
-      for (const v of vehicles) bikes.push(toBike(v, st.lat, st.lon, id));
+      // null = a station the API doesn't know: as far as we can tell nothing stands there.
+      byStation.set(id, st ? (result[`s${id}`] ?? []).map((v) => toBike(v, st.lat, st.lon, id)) : []);
     }
-  }
-  return bikes;
+  });
+  return { byStation, chunks: chunks.length, failedChunks: results.filter((r) => r === null).length };
+}
+
+/** Bikes at one station right now (null = no such station): one GraphQL query plus the edge-cached station list. */
+export async function fetchStationBikes(id: string): Promise<Bike[] | null> {
+  if (!isStationId(id)) return null;
+  const st = (await fetchStationInfo()).find((s) => s.station_id === id);
+  if (!st) return null;
+  const result = await dockGroupQuery([id]);
+  return (result[`s${id}`] ?? []).map((v) => toBike(v, st.lat, st.lon, id));
 }
