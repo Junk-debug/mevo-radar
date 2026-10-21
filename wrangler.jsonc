@@ -15,13 +15,14 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
-  "kv_namespaces": [
-    // Created with `npx wrangler kv namespace create MEVO_KV`. An id, not a secret.
-    { "binding": "MEVO_KV", "id": "2f525e40e5bf424da844ef4a2b25c101" }
-  ],
-  "triggers": {
-    // Refresh frame numbers of bikes at stations. Free KV allows 1000 writes/day, so not every minute.
-    "crons": ["*/5 * * * *"]
+  // Bikes at stations, with frame numbers: one object rescans them on its own alarm (worker/docked.ts).
+  // The free plan supports only SQLite-backed Durable Objects.
+  "durable_objects": {
+    "bindings": [{ "name": "DOCKED", "class_name": "DockedBikes" }]
   },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DockedBikes"] }],
+  // No cron any more. An explicit empty list makes the deploy delete the old */5 trigger;
+  // leaving the key out would keep it firing at a Worker without a scheduled handler.
+  "triggers": { "crons": [] },
   "observability": { "enabled": true }
 }
